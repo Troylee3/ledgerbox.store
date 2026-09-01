@@ -1,0 +1,6 @@
+{
+  "name": "LedgerBox",
+  "description": "Mfumo kamili wa mauzo (POS), stoo, wateja, na usimamizi wa madeni unaofanya kazi 100% offline kwa ajili ya LedgerBox.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

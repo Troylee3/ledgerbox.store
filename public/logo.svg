@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+    <!-- Accent Gradient -->
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded App Icon Canvas -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  
+  <!-- Subtle inner neon circular glow -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#glowGrad)" stroke-width="4" stroke-opacity="0.3" stroke-dasharray="8 8" />
+
+  <!-- Supermarket cart back outline -->
+  <g transform="translate(116, 116)">
+    <!-- Cart path -->
+    <path d="M20 30 h40 l40 140 h140 l30 -100 h-190" fill="none" stroke="url(#glowGrad)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- Wheels -->
+    <circle cx="110" cy="200" r="22" fill="#38bdf8" />
+    <circle cx="210" cy="200" r="22" fill="#38bdf8" />
+    <!-- Inner design - letters PM in elegant stencil style -->
+    <text x="100" y="125" font-family="'Inter', 'Space Grotesk', system-ui, sans-serif" font-size="75" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="-2">PM</text>
+  </g>
+
+  <!-- Top star elements for premium vibe -->
+  <path d="M380 120 l6 15 l15 6 l-15 6 l-6 15 l-6 -15 l-15 -6 l15 -6 z" fill="#fbbf24" />
+  <path d="M120 360 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4 z" fill="#38bdf8" />
+</svg>

@@ -1,0 +1,157 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Product inventory item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "barcode": { "type": "string" },
+        "category": { "type": "string" },
+        "costPrice": { "type": "number" },
+        "sellingPrice": { "type": "number" },
+        "stock": { "type": "number" },
+        "minStock": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "category", "costPrice", "sellingPrice", "stock"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Category for products",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "color": { "type": "string" }
+      },
+      "required": ["id", "name", "color"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer record with debt info",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "debt": { "type": "number" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "phone", "debt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "POS checkout transaction log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "subtotal": { "type": "number" },
+        "discount": { "type": "number" },
+        "total": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "customerId": { "type": "string" },
+        "receivedAmount": { "type": "number" },
+        "changeAmount": { "type": "number" },
+        "timestamp": { "type": "string" },
+        "cashierName": { "type": "string" },
+        "receiptNumber": { "type": "string" }
+      },
+      "required": ["id", "subtotal", "discount", "total", "paymentMethod", "timestamp", "cashierName", "receiptNumber"]
+    },
+    "DebtLog": {
+      "title": "DebtLog",
+      "description": "Debt borrowing or repayment record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "type": { "type": "string", "enum": ["BORROW", "PAYMENT"] },
+        "amount": { "type": "number" },
+        "note": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "receiptId": { "type": "string" }
+      },
+      "required": ["id", "customerId", "type", "amount", "timestamp"]
+    },
+    "StockLog": {
+      "title": "StockLog",
+      "description": "Inventory stock log history",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "type": { "type": "string", "enum": ["IN", "OUT", "SALE", "ADJUST"] },
+        "quantity": { "type": "number" },
+        "note": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "productId", "type", "quantity", "timestamp"]
+    },
+    "StaffUser": {
+      "title": "StaffUser",
+      "description": "Authorized staff user pin logins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["ADMIN", "CASHIER"] },
+        "pin": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "role", "pin", "createdAt"]
+    },
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "POS store metadata and configurations",
+      "type": "object",
+      "properties": {
+        "storeName": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "receiptGreeting": { "type": "string" },
+        "currencySymbol": { "type": "string" },
+        "taxPercent": { "type": "number" }
+      },
+      "required": ["storeName", "currencySymbol", "taxPercent"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Product collection"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Category collection"
+    },
+    "/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Customer collection"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Transaction logs collection"
+    },
+    "/debtLogs/{debtLogId}": {
+      "schema": "DebtLog",
+      "description": "Debt adjustments log collection"
+    },
+    "/stockLogs/{stockLogId}": {
+      "schema": "StockLog",
+      "description": "Stock changes log collection"
+    },
+    "/users/{userId}": {
+      "schema": "StaffUser",
+      "description": "Staff cashier users collection"
+    },
+    "/settings/store": {
+      "schema": "StoreSettings",
+      "description": "Store configuration and setup"
+    }
+  }
+}

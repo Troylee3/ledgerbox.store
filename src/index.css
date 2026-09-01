@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Glassmorphism & Modern Utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.dark-glass-panel {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 41, 59, 0.8);
+}
+
+.modern-card {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modern-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+}
+
+/* Smooth Focus Rings */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+}
+
+/* Thermal & POS Printer Styles (@media print) */
+@media print {
+  /* Hide all surrounding app navigation, background overlays, sidebars, and non-receipt UI */
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-family: 'JetBrains Mono', monospace, Courier, sans-serif !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Show ONLY the receipt content */
+  #receipt-active-view,
+  #receipt-active-view *,
+  #thermal-receipt,
+  #thermal-receipt * {
+    visibility: visible !important;
+  }
+
+  /* Position thermal receipt at the top-left of the page with standard POS thermal paper width */
+  #receipt-active-view,
+  #thermal-receipt {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 80mm !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 8px 10px !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+  }
+
+  /* Reset modal containers so they don't clip or darken receipt output */
+  #receipt-modal-backdrop,
+  #receipt-modal-card {
+    position: static !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+    width: auto !important;
+  }
+
+  /* Force dark text and clean dashed lines */
+  #receipt-active-view span,
+  #receipt-active-view p,
+  #receipt-active-view h4,
+  #receipt-active-view div,
+  #receipt-active-view td,
+  #receipt-active-view th,
+  #thermal-receipt span,
+  #thermal-receipt p,
+  #thermal-receipt h4,
+  #thermal-receipt div,
+  #thermal-receipt td,
+  #thermal-receipt th {
+    color: #000000 !important;
+  }
+
+  #receipt-active-view .border-dashed,
+  #thermal-receipt .border-dashed {
+    border-color: #000000 !important;
+  }
+
+  /* Hide decorative serrated edges or interactive panels when printing */
+  .print-hide,
+  #receipt-sms-panel,
+  #receipt-modal-actions,
+  #cancel-tx-confirm-box,
+  #close-receipt-btn {
+    display: none !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 0mm;
+  }
+}
+
+
