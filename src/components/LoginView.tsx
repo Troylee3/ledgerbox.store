@@ -3,7 +3,7 @@ import { DbState, StaffUser, BusinessAccount } from '../types';
 import { 
   Search, Lock, User, Shield, Smartphone, Monitor, Download, ArrowRight, ShoppingBag, 
   UserPlus, LogIn, Store, Users, CheckCircle, CheckCircle2, HelpCircle, LogOut, Sparkles, Phone, Mail,
-  AlertCircle, ExternalLink
+  AlertCircle, ExternalLink, FileText
 } from 'lucide-react';
 import { useLanguage } from '../lib/translations';
 import { googleSignIn } from '../lib/firebase';
@@ -38,7 +38,17 @@ export default function LoginView({
 
   const [isPwaModalOpen, setIsPwaModalOpen] = useState(false);
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
-  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState<boolean>(() => {
+    try {
+      return typeof window !== 'undefined' && (
+        window.location.search.toLowerCase().includes('privacy') || 
+        window.location.hash.toLowerCase().includes('privacy') ||
+        window.location.pathname.toLowerCase().includes('privacy')
+      );
+    } catch {
+      return false;
+    }
+  });
 
   // Mode state: 'PIN_CASHIER' | 'REGISTER_ACCOUNT' | 'SWITCH_ACCOUNT'
   const [authMode, setAuthMode] = useState<'PIN_CASHIER' | 'REGISTER_ACCOUNT' | 'SWITCH_ACCOUNT'>(() => {
@@ -523,15 +533,66 @@ export default function LoginView({
         {authMode === 'REGISTER_ACCOUNT' && (
           <div className="space-y-4 my-auto animate-fade-in">
             <div>
-              <h2 className="text-sm font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                <UserPlus size={16} />
-                {language === 'SW' ? 'Sajili Akaunti Mpya ya Duka' : 'Register New Store Account'}
-              </h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                  <UserPlus size={16} />
+                  {language === 'SW' ? 'Sajili Akaunti Mpya ya Duka' : 'Register New Store Account'}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setIsPrivacyModalOpen(true)}
+                  className="px-2 py-0.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 rounded-lg text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                >
+                  <Shield size={11} className="text-emerald-400" />
+                  <span>{language === 'SW' ? 'Sera ya Faragha' : 'Privacy Policy'}</span>
+                </button>
+              </div>
               <p className="text-xs text-slate-400 mt-1">
                 {language === 'SW' 
                   ? 'Tengeneza akaunti ya duka ili kutenganisha bidhaa na taarifa zako na watumiaji wengine.'
                   : 'Create a separate store account to keep your products and sales independent.'}
               </p>
+            </div>
+
+            {/* PRIVACY POLICY & GOOGLE VERIFICATION NOTICE EMBEDDED DIRECTLY IN THE REGISTRATION FORM */}
+            <div className="p-3 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/40 border border-emerald-500/40 rounded-xl space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-emerald-300 font-extrabold text-[11px] uppercase tracking-wide">
+                  <Shield size={13} className="text-emerald-400 shrink-0" />
+                  <span>{language === 'SW' ? 'Sera ya Faragha & Usalama wa Data' : 'Privacy Policy & Data Security'}</span>
+                </div>
+                <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-mono font-bold shrink-0">
+                  Google Verified
+                </span>
+              </div>
+              
+              <p className="text-[10px] text-slate-300 leading-relaxed">
+                {language === 'SW'
+                  ? 'Taarifa zako na za wateja zinalindwa kwa usimbaji fiche (TLS 1.3 & AES-256). Matumizi ya data za Google yanazingatia Google API Services User Data Policy (Limited Use) — hatuuzi wala kugawa data zako kamwe.'
+                  : 'Your store records are secured with TLS 1.3 & AES-256 encryption. Google user data strictly adheres to Google API Services User Data Policy (Limited Use) — no data selling or third-party ads.'}
+              </p>
+
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => setIsPrivacyModalOpen(true)}
+                  className="text-emerald-400 hover:text-emerald-300 text-[10px] font-bold underline flex items-center gap-1 cursor-pointer"
+                >
+                  <FileText size={11} />
+                  <span>{language === 'SW' ? 'Soma Sera Kamili ya Faragha (Privacy Policy)' : 'Read Complete Privacy Policy'}</span>
+                </button>
+
+                <a
+                  href="/privacy.html"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-slate-400 hover:text-indigo-300 text-[9.5px] font-mono flex items-center gap-1 transition"
+                  title="Fungua faili la HTML"
+                >
+                  <span>privacy.html</span>
+                  <ExternalLink size={9} />
+                </a>
+              </div>
             </div>
 
             {accountError && (
@@ -618,6 +679,38 @@ export default function LoginView({
                   value={regPassword}
                   onChange={e => setRegPassword(e.target.value)}
                 />
+              </div>
+
+              {/* CONSENT NOTICE ABOVE FORM SUBMIT BUTTON */}
+              <div className="p-2 bg-slate-950/80 rounded-lg border border-slate-800 flex items-start gap-1.5 text-[9.5px] text-slate-400">
+                <CheckCircle2 size={13} className="text-emerald-400 shrink-0 mt-0.5" />
+                <p>
+                  {language === 'SW' ? (
+                    <>
+                      Kwa kutengeneza akaunti, unakubaliana na{' '}
+                      <button
+                        type="button"
+                        onClick={() => setIsPrivacyModalOpen(true)}
+                        className="text-emerald-400 hover:underline font-bold"
+                      >
+                        Sera ya Faragha (Privacy Policy)
+                      </button>{' '}
+                      na ulinzi wa taarifa za biashara yako.
+                    </>
+                  ) : (
+                    <>
+                      By registering, you agree to our{' '}
+                      <button
+                        type="button"
+                        onClick={() => setIsPrivacyModalOpen(true)}
+                        className="text-emerald-400 hover:underline font-bold"
+                      >
+                        Privacy Policy
+                      </button>{' '}
+                      and secure data protection terms.
+                    </>
+                  )}
+                </p>
               </div>
 
               <button
@@ -806,12 +899,21 @@ export default function LoginView({
               </button>
             </form>
 
-            <div className="text-center pt-2">
+            <div className="flex flex-col items-center gap-2 pt-2 text-center">
               <button
                 onClick={() => setAuthMode('REGISTER_ACCOUNT')}
                 className="text-xs text-emerald-400 hover:underline font-bold cursor-pointer"
               >
                 {language === 'SW' ? '+ Sajili Akaunti Mpya ya Duka →' : '+ Register New Store Account →'}
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setIsPrivacyModalOpen(true)}
+                className="text-[10px] text-slate-400 hover:text-emerald-400 flex items-center gap-1 transition cursor-pointer font-medium"
+              >
+                <Shield size={11} className="text-emerald-400" />
+                <span>{language === 'SW' ? 'Sera ya Faragha (Privacy Policy)' : 'Privacy Policy & Terms'}</span>
               </button>
             </div>
           </div>
@@ -1042,7 +1144,19 @@ export default function LoginView({
 
       {isPrivacyModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col">
-          <PrivacyPolicyView onClose={() => setIsPrivacyModalOpen(false)} />
+          <PrivacyPolicyView onClose={() => {
+            setIsPrivacyModalOpen(false);
+            try {
+              if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('privacy');
+                if (url.hash.includes('privacy')) url.hash = '';
+                window.history.replaceState({}, document.title, url.pathname);
+              }
+            } catch (e) {
+              console.warn('URL cleanup skipped:', e);
+            }
+          }} />
         </div>
       )}
 

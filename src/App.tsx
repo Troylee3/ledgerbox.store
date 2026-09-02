@@ -34,7 +34,11 @@ export default function App() {
   const [isDocModalOpen, setIsDocModalOpen] = useState<boolean>(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState<boolean>(() => {
     try {
-      return typeof window !== 'undefined' && (window.location.search.includes('privacy') || window.location.hash.includes('privacy'));
+      return typeof window !== 'undefined' && (
+        window.location.search.toLowerCase().includes('privacy') || 
+        window.location.hash.toLowerCase().includes('privacy') ||
+        window.location.pathname.toLowerCase().includes('privacy')
+      );
     } catch {
       return false;
     }
@@ -43,6 +47,26 @@ export default function App() {
   // Simulated cashier name with customer state
   const [cashierName, setCashierName] = useState('Brayan');
   const [selectedReceipt, setSelectedReceipt] = useState<Transaction | null>(null);
+
+  if (isPrivacyModalOpen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col overflow-y-auto">
+        <PrivacyPolicyView onClose={() => {
+          setIsPrivacyModalOpen(false);
+          try {
+            if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('privacy');
+              if (url.hash.includes('privacy')) url.hash = '';
+              window.history.replaceState({}, document.title, url.pathname);
+            }
+          } catch (e) {
+            console.warn('URL cleanup skipped:', e);
+          }
+        }} />
+      </div>
+    );
+  }
 
   if (!store.isLoaded || !store.state) {
     return (
