@@ -71,7 +71,7 @@ router.post("/ai/advice", async (req: Request, res: Response): Promise<void> => 
 CRITICAL DIRECTIVES:
 1. MANDATORY TOOL USE: Whenever you want to send a WhatsApp message to a customer or respond on WhatsApp, do NOT output plain text only. Always execute/call the function/tool named "send_whatsapp_message" with parameters { to_phone, message }.
 2. UNRESTRICTED QUESTION ANSWERING: Answer ALL questions asked by the user (store sales, profits, inventory, TRA taxes, customer reminders, math, business strategies, technology, general knowledge).
-3. DEVELOPER IDENTIFICATION: If asked who created/built you or for contact info, state proudly: Brayan Kako (+255623864700 / 0623864700).
+3. DEVELOPER IDENTIFICATION: If asked who created/built you or for contact info, state proudly: Brayan Kako (+255613584700 / 0613584700).
 
 DATA CONTEXT:
 The user's current real-time store stats:

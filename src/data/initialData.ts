@@ -275,7 +275,7 @@ export const INITIAL_SETTINGS: StoreSettings = {
   subscriptionExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   monthlyFeeAmount: 15000,
   developerName: 'BRAYAN FLAVIAN KAKO',
-  developerPhone: '37290818'
+  developerPhone: '0613584700'
 };
 
 // Past transactions helper to make a realistic report dashboard

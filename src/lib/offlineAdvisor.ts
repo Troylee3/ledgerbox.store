@@ -61,7 +61,7 @@ export function generateOfflineAdvice(userInput: string, summary: StoreSummary, 
 
 Namba ya simu ya mtaalamu na msanidi mkuu wa mfumo wa **LedgerBox** (**Brayan Kako**) ni:
 
-📱 **+255 623 864 700** (au **0623864700**)
+📱 **+255 613 584 700** (au **0613584700**)
 
 **Unaweza kuwasiliana naye kwa:**
 - 📞 **Piga Simu Moja kwa Moja:** Kwa msaada wa haraka wa kiufundi, mafunzo au ushauri.
@@ -74,7 +74,7 @@ Je, kuna jambo lingine ungependa kukusaidia kuhusu duka lako leo?`;
 
 The official contact phone number for LedgerBox developer and system architect **Brayan Kako** is:
 
-📱 **+255 623 864 700** (or **0623864700**)
+📱 **+255 613 584 700** (or **0613584700**)
 
 **Contact Options:**
 - 📞 **Direct Call:** For technical support, onboarding, or system inquiries.
@@ -106,7 +106,7 @@ Mfumo huu mzima wa LedgerBox pamoja na uwezo wangu wa ushauri umetengenezwa kwa 
 
 **Kuhusu Msanidi Programu wako:**
 - **Jina:** Brayan Kako
-- **Namba ya Simu:** **+255 623 864 700** (au **0623864700**)
+- **Namba ya Simu:** **+255 613 584 700** (au **0613584700**)
 - **Kazi yake:** Ameunda LedgerBox kuleta urahisi katika utunzaji wa hesabu, uchambuzi wa faida/hasara, usimamizi wa stoo, na utumaji wa risiti kiotomatiki kwa SMS/WhatsApp kwa wafanyabiashara.
 - **Lengo langu:** Brayan Kako alinipa uwezo wa kusoma takwimu za duka na kukupa mwongozo wa kutumia mfumo huu hata ukiwa **100% offline (bila mtandao)**!
 
@@ -118,7 +118,7 @@ The entire LedgerBox system and my diagnostic capabilities have been crafted wit
 
 **About Your System Developer:**
 - **Name:** Brayan Kako
-- **Phone Number:** **+255 623 864 700** (or **0623864700**)
+- **Phone Number:** **+255 613 584 700** (or **0613584700**)
 - **His Mission:** He designed LedgerBox to simplify bookkeeping, profit/loss tracking, inventory management, and automated receipt delivery via SMS/WhatsApp.
 - **My Capabilities:** Brayan Kako built me with the capability to explain **EVERY single system feature** and guide you even when **100% offline (with zero internet)**!
 

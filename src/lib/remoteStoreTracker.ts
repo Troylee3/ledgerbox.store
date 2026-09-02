@@ -238,7 +238,7 @@ export async function syncAllLocalStoresToCloud(): Promise<number> {
           subscriptionStatus: 'ACTIVE',
           monthlyFeeAmount: 15000,
           developerName: 'Kiprotich & Co. Tech',
-          developerPhone: '0700000000',
+          developerPhone: '0613584700',
           developerPin: '2026'
         };
 

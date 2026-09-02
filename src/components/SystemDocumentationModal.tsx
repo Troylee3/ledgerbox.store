@@ -131,7 +131,7 @@ export const LEDGERBOX_FEATURES = [
         desc: "Inakupa ushauri wa kitaalamu wa bidhaa zinazoongozwa kwa mauzo na jinsi ya kuongeza faida."
       },
       {
-        name: "Taarifa za Msanidi (Brayan Kako - +255623864700)",
+        name: "Taarifa za Msanidi (Brayan Kako - +255613584700)",
         desc: "Ina taarifa sahihi za msanidi mkuu na namba yake ya simu kwa ajili ya msaada wowote wa kiufundi."
       }
     ]
@@ -308,7 +308,7 @@ export default function SystemDocumentationModal({ isOpen, onClose }: SystemDocu
                 {language === 'SW' ? 'Mwongozo na Vipengele vyote vya LedgerBox' : 'LedgerBox Complete System Feature Specifications'}
               </h3>
               <p className="text-[11px] text-slate-400 truncate">
-                {language === 'SW' ? 'Msanidi: Brayan Kako (+255623864700)' : 'Developer: Brayan Kako (+255623864700)'}
+                {language === 'SW' ? 'Msanidi: Brayan Kako (+255613584700)' : 'Developer: Brayan Kako (+255613584700)'}
               </p>
             </div>
           </div>
@@ -343,7 +343,7 @@ export default function SystemDocumentationModal({ isOpen, onClose }: SystemDocu
                 {language === 'SW' ? 'Kuhusu Mfumo wa LedgerBox POS' : 'About LedgerBox POS System'}
               </h4>
               <p className="text-slate-600 leading-relaxed">
-                LedgerBox ni mfumo wa kisasa wa utunzaji wa hesabu za maduka, usimamizi wa stoo, kutoa risiti za kielektroniki, na uchambuzi wa faida halisi. Umetengenezwa mahususi na msanidi **Brayan Kako (+255623864700)** kufanya kazi **100% Offline (Nje ya Mtandao)** bila kutegemea bando la intaneti wala mifumo ya nje.
+                LedgerBox ni mfumo wa kisasa wa utunzaji wa hesabu za maduka, usimamizi wa stoo, kutoa risiti za kielektroniki, na uchambuzi wa faida halisi. Umetengenezwa mahususi na msanidi **Brayan Kako (+255613584700)** kufanya kazi **100% Offline (Nje ya Mtandao)** bila kutegemea bando la intaneti wala mifumo ya nje.
               </p>
             </div>
           </div>
@@ -387,7 +387,7 @@ export default function SystemDocumentationModal({ isOpen, onClose }: SystemDocu
         <div className="p-4 bg-slate-100 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-600 shrink-0">
           <div className="flex items-center gap-2 font-medium">
             <ShieldCheck size={16} className="text-emerald-600" />
-            <span>LedgerBox Version 3.0 | Built by Brayan Kako (+255623864700)</span>
+            <span>LedgerBox Version 3.0 | Built by Brayan Kako (+255613584700)</span>
           </div>
 
           <div className="flex items-center gap-3">
