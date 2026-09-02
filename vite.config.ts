@@ -16,7 +16,9 @@ export default defineConfig(() => {
       dedupe: ['react', 'react-dom'],
       alias: [
         {find: /^react$/, replacement: reactPath},
+        {find: /^react\/(.*)$/, replacement: `${reactPath}/$1`},
         {find: /^react-dom$/, replacement: reactDomPath},
+        {find: /^react-dom\/(.*)$/, replacement: `${reactDomPath}/$1`},
         {find: '@', replacement: projectRoot},
       ],
     },
@@ -25,11 +27,10 @@ export default defineConfig(() => {
       force: true,
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
-      hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      // The hosted preview does not reliably proxy Vite's HMR WebSocket.
+      // Keep the app stable and avoid noisy "WebSocket closed without opened" errors.
+      hmr: false,
+      watch: {},
     },
   };
 });
