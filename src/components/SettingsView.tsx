@@ -5,6 +5,7 @@ import CloudSyncHub from './CloudSyncHub';
 import { useLanguage } from '../lib/translations';
 import { getLicenseStatus, verifyAndApplyLicenseKey, DEFAULT_DEVELOPER_PIN } from '../lib/licenseEngine';
 import DeveloperLicenseModal from './DeveloperLicenseModal';
+import PrivacyPolicyView from './PrivacyPolicyView';
 import { 
   Settings, Save, RefreshCw, Download, Upload, AlertTriangle, FileText, CheckCircle, User, Info, Smartphone, Plus, Trash2, Edit, Shield, Key, Monitor, Image, UploadCloud, RotateCcw, MessageSquare, Check
 } from 'lucide-react';
@@ -98,6 +99,7 @@ export default function SettingsView({
   // License & Subscription states
   const licenseStatus = getLicenseStatus(settings);
   const [showDevModalFromSettings, setShowDevModalFromSettings] = useState(false);
+  const [showPrivacyPolicyModal, setShowPrivacyPolicyModal] = useState(false);
   const [licenseKeyInput, setLicenseKeyInput] = useState('');
   const [licenseMsg, setLicenseMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [showDevPinModalSettings, setShowDevPinModalSettings] = useState(false);
@@ -1659,6 +1661,40 @@ export default function SettingsView({
         />
       </div>
 
+      {/* Privacy Policy & Google Verification Compliance Card */}
+      <div className="mt-6 bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 text-white shadow-md">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+              <Shield size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-extrabold text-sm sm:text-base text-white">
+                  {language === 'SW' ? 'Sera ya Faragha na Usalama wa Data' : 'Privacy Policy & Data Security'}
+                </h3>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                  Google Verification Compliant
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                {language === 'SW'
+                  ? 'Taarifa za kisheria zinazoeleza jinsi LedgerBox inavyolinda data za duka, miamala, wateja na uthibitishaji wa Google OAuth & Sheets API kulingana na sheria ya Tanzania na kimataifa.'
+                  : 'Official legal disclosure outlining how LedgerBox protects store records, transactions, customer books, and Google OAuth & Sheets API compliance under Tanzania Data Act & GDPR.'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowPrivacyPolicyModal(true)}
+            className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 transition cursor-pointer shadow-md shrink-0 w-full sm:w-auto justify-center"
+          >
+            <Shield size={14} />
+            <span>{language === 'SW' ? 'Fungua Sera ya Faragha' : 'View Privacy Policy'}</span>
+          </button>
+        </div>
+      </div>
+
       {/* 🔐 SCREEN LOCK LOGIN SWAPPING PIN CHECK overlay MODAL */}
       {pinTargetUser && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in select-none">
@@ -1796,6 +1832,13 @@ export default function SettingsView({
         onDeleteAccount={onDeleteAccount}
         onReloadAccounts={onReloadAccounts}
       />
+
+      {/* PRIVACY POLICY & GOOGLE VERIFICATION COMPLIANCE MODAL */}
+      {showPrivacyPolicyModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col">
+          <PrivacyPolicyView onClose={() => setShowPrivacyPolicyModal(false)} />
+        </div>
+      )}
 
     </div>
   );

@@ -201,9 +201,109 @@ export default function ReportsView({ state, onNavigateToInventory }: ReportsVie
       }
     });
 
-    const profitTotal = Math.max(0, salesTotal - costTotal);
-    const profitMonthly = Math.max(0, salesMonthly - costMonthly);
-    const profitToday = Math.max(0, salesToday - costToday);
+    // 5. EXPENSES COMPILING (Expenses deduct from Sales and Profit of the Day)
+    const expensesList = state.expenses || [];
+    let expensesTotal = 0;
+    let expensesMonthly = 0;
+    let expensesToday = 0;
+
+    let expenseCashFlowAll: Record<PaymentMethod, number> = {
+      CASH: 0,
+      CARD: 0,
+      M_PESA: 0,
+      TIGO_PESA: 0,
+      AIRTEL_MONEY: 0,
+      HALOPESA: 0,
+      CREDIT: 0
+    };
+
+    let expenseCashFlowMonthly: Record<PaymentMethod, number> = {
+      CASH: 0,
+      CARD: 0,
+      M_PESA: 0,
+      TIGO_PESA: 0,
+      AIRTEL_MONEY: 0,
+      HALOPESA: 0,
+      CREDIT: 0
+    };
+
+    let expenseCashFlowToday: Record<PaymentMethod, number> = {
+      CASH: 0,
+      CARD: 0,
+      M_PESA: 0,
+      TIGO_PESA: 0,
+      AIRTEL_MONEY: 0,
+      HALOPESA: 0,
+      CREDIT: 0
+    };
+
+    expensesList.forEach(exp => {
+      const expDate = new Date(exp.date);
+      const isExpToday = exp.date && exp.date.startsWith(todayStr);
+      const isExpThisMonth = !isNaN(expDate.getTime()) && expDate.getFullYear() === currentYear && expDate.getMonth() === currentMonth;
+      const amt = exp.amount || 0;
+      const pm = (exp.paymentMethod || 'CASH') as PaymentMethod;
+
+      expensesTotal += amt;
+      if (expenseCashFlowAll[pm] !== undefined) {
+        expenseCashFlowAll[pm] += amt;
+      }
+
+      if (isExpThisMonth) {
+        expensesMonthly += amt;
+        if (expenseCashFlowMonthly[pm] !== undefined) {
+          expenseCashFlowMonthly[pm] += amt;
+        }
+      }
+
+      if (isExpToday) {
+        expensesToday += amt;
+        if (expenseCashFlowToday[pm] !== undefined) {
+          expenseCashFlowToday[pm] += amt;
+        }
+      }
+    });
+
+    // Net Sales = Gross Realized Sales - Period Operating Expenses
+    const netSalesToday = Math.max(0, salesToday - expensesToday);
+    const netSalesMonthly = Math.max(0, salesMonthly - expensesMonthly);
+    const netSalesTotal = Math.max(0, salesTotal - expensesTotal);
+
+    // Net Profit = (Realized Sales - COGS) - Operating Expenses
+    const profitToday = Math.max(0, (salesToday - costToday) - expensesToday);
+    const profitMonthly = Math.max(0, (salesMonthly - costMonthly) - expensesMonthly);
+    const profitTotal = Math.max(0, (salesTotal - costTotal) - expensesTotal);
+
+    // Net Cash Flow per payment method
+    const netCashFlowToday = {
+      CASH: Math.max(0, cashFlowToday.CASH - expenseCashFlowToday.CASH),
+      M_PESA: Math.max(0, cashFlowToday.M_PESA - expenseCashFlowToday.M_PESA),
+      TIGO_PESA: Math.max(0, cashFlowToday.TIGO_PESA - expenseCashFlowToday.TIGO_PESA),
+      AIRTEL_MONEY: Math.max(0, cashFlowToday.AIRTEL_MONEY - expenseCashFlowToday.AIRTEL_MONEY),
+      HALOPESA: Math.max(0, cashFlowToday.HALOPESA - expenseCashFlowToday.HALOPESA),
+      CARD: Math.max(0, cashFlowToday.CARD - expenseCashFlowToday.CARD),
+      CREDIT: cashFlowToday.CREDIT
+    };
+
+    const netCashFlowMonthly = {
+      CASH: Math.max(0, cashFlowMonthly.CASH - expenseCashFlowMonthly.CASH),
+      M_PESA: Math.max(0, cashFlowMonthly.M_PESA - expenseCashFlowMonthly.M_PESA),
+      TIGO_PESA: Math.max(0, cashFlowMonthly.TIGO_PESA - expenseCashFlowMonthly.TIGO_PESA),
+      AIRTEL_MONEY: Math.max(0, cashFlowMonthly.AIRTEL_MONEY - expenseCashFlowMonthly.AIRTEL_MONEY),
+      HALOPESA: Math.max(0, cashFlowMonthly.HALOPESA - expenseCashFlowMonthly.HALOPESA),
+      CARD: Math.max(0, cashFlowMonthly.CARD - expenseCashFlowMonthly.CARD),
+      CREDIT: cashFlowMonthly.CREDIT
+    };
+
+    const netCashFlowAll = {
+      CASH: Math.max(0, cashFlowAll.CASH - expenseCashFlowAll.CASH),
+      M_PESA: Math.max(0, cashFlowAll.M_PESA - expenseCashFlowAll.M_PESA),
+      TIGO_PESA: Math.max(0, cashFlowAll.TIGO_PESA - expenseCashFlowAll.TIGO_PESA),
+      AIRTEL_MONEY: Math.max(0, cashFlowAll.AIRTEL_MONEY - expenseCashFlowAll.AIRTEL_MONEY),
+      HALOPESA: Math.max(0, cashFlowAll.HALOPESA - expenseCashFlowAll.HALOPESA),
+      CARD: Math.max(0, cashFlowAll.CARD - expenseCashFlowAll.CARD),
+      CREDIT: cashFlowAll.CREDIT
+    };
 
     const activeDebts = customers.reduce((sum, c) => sum + c.debt, 0);
 
@@ -247,62 +347,86 @@ export default function ReportsView({ state, onNavigateToInventory }: ReportsVie
     });
 
     return {
-      salesTotal,
+      grossSalesTotal: salesTotal,
+      expensesTotal,
+      salesTotal: netSalesTotal,
       profitTotal,
       debtTotal: activeDebts,
       receiptsCount,
-      cashFlowAll,
+      cashFlowAll: netCashFlowAll,
+      grossCashFlowAll: cashFlowAll,
+      expenseCashFlowAll,
       capitalTotal,
 
-      salesMonthly,
+      grossSalesMonthly: salesMonthly,
+      expensesMonthly,
+      salesMonthly: netSalesMonthly,
       profitMonthly,
       receiptsMonthly,
-      cashFlowMonthly,
+      cashFlowMonthly: netCashFlowMonthly,
+      grossCashFlowMonthly: cashFlowMonthly,
+      expenseCashFlowMonthly,
       monthlyLoss,
 
-      salesToday,
+      grossSalesToday: salesToday,
+      expensesToday,
+      salesToday: netSalesToday,
       profitToday,
       receiptsToday,
-      cashFlowToday,
+      cashFlowToday: netCashFlowToday,
+      grossCashFlowToday: cashFlowToday,
+      expenseCashFlowToday,
       todayLoss,
 
       allTimeLoss
     };
-  }, [transactions, customers, products, stockLogs]);
+  }, [transactions, customers, products, stockLogs, state.expenses, state.debtLogs]);
 
   // Determine active duration metrics
   const activeKPIs = useMemo(() => {
     switch (timePeriod) {
       case 'TODAY':
         return {
-          sales: metrics.salesToday,
+          grossSales: metrics.grossSalesToday,
+          expenses: metrics.expensesToday,
+          sales: metrics.salesToday, // Net sales with expenses deducted
           profit: metrics.profitToday,
           loss: metrics.todayLoss,
           receipts: metrics.receiptsToday,
           cashFlow: metrics.cashFlowToday,
+          grossCashFlow: metrics.grossCashFlowToday,
+          expenseCashFlow: metrics.expenseCashFlowToday,
           durationLabel: language === 'SW' ? 'Leo (Today)' : 'Today'
         };
       case 'THIS_MONTH':
         return {
+          grossSales: metrics.grossSalesMonthly,
+          expenses: metrics.expensesMonthly,
           sales: metrics.salesMonthly,
           profit: metrics.profitMonthly,
           loss: metrics.monthlyLoss,
           receipts: metrics.receiptsMonthly,
           cashFlow: metrics.cashFlowMonthly,
+          grossCashFlow: metrics.grossCashFlowMonthly,
+          expenseCashFlow: metrics.expenseCashFlowMonthly,
           durationLabel: language === 'SW' ? 'Mwezi Huu' : 'This Month'
         };
       case 'ALL_TIME':
       default:
         return {
+          grossSales: metrics.grossSalesTotal,
+          expenses: metrics.expensesTotal,
           sales: metrics.salesTotal,
           profit: metrics.profitTotal,
           loss: metrics.allTimeLoss,
           receipts: metrics.receiptsCount,
           cashFlow: metrics.cashFlowAll,
+          grossCashFlow: metrics.grossCashFlowAll,
+          expenseCashFlow: metrics.expenseCashFlowAll,
           durationLabel: language === 'SW' ? 'Muda Wote' : 'All Time'
         };
     }
-  }, [timePeriod, metrics]);
+  }, [timePeriod, metrics, language]);
 
   // Itemized transactions list (latest first)
   const itemizedSales = useMemo(() => {
@@ -795,38 +919,48 @@ export default function ReportsView({ state, onNavigateToInventory }: ReportsVie
       const isodate = d.toISOString().split('T')[0];
       const dayLabel = d.toLocaleDateString('sw-TZ', { weekday: 'short' });
 
-      let dailySales = 0;
+      let grossDailySales = 0;
       let dailyCost = 0;
+      let dailyExpenses = 0;
 
       transactions.forEach(tx => {
         const txDate = tx.timestamp.split('T')[0];
         if (txDate === isodate) {
           const isCredit = tx.paymentMethod === 'CREDIT';
           const paidPart = isCredit ? (tx.receivedAmount || 0) : tx.total;
-          dailySales += paidPart;
+          grossDailySales += paidPart;
           tx.items.forEach(it => {
-            dailyCost += it.product.costPrice * it.quantity;
+            dailyCost += (it.product?.costPrice || 0) * (it.quantity || 1);
           });
         }
       });
 
       (state.debtLogs || []).forEach(log => {
         if (log.type === 'PAYMENT' && log.timestamp && log.timestamp.split('T')[0] === isodate) {
-          dailySales += log.amount;
+          grossDailySales += log.amount;
         }
       });
 
-      const dailyProfit = Math.max(0, dailySales - dailyCost);
+      (state.expenses || []).forEach(exp => {
+        if (exp.date && exp.date.startsWith(isodate)) {
+          dailyExpenses += exp.amount || 0;
+        }
+      });
+
+      const netDailySales = Math.max(0, grossDailySales - dailyExpenses);
+      const netDailyProfit = Math.max(0, (grossDailySales - dailyCost) - dailyExpenses);
 
       list.push({
         label: dayLabel,
-        sales: dailySales,
-        profit: dailyProfit,
+        sales: netDailySales,
+        grossSales: grossDailySales,
+        expenses: dailyExpenses,
+        profit: netDailyProfit,
         dateString: isodate
       });
     }
     return list;
-  }, [transactions]);
+  }, [transactions, state.expenses, state.debtLogs]);
 
   // Compute maximum sales for chart scaling
   const maxChartValue = useMemo(() => {
@@ -1063,63 +1197,89 @@ export default function ReportsView({ state, onNavigateToInventory }: ReportsVie
           {/* Analytics KPI Bento Boxes */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             
-            {/* Sales Card */}
-            <div className="bg-white border border-slate-200 p-4.5 rounded-xl shadow-2xs flex items-center gap-3">
-              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-800">
-                <TrendingUp size={20} />
+            {/* Sales Card (Net Sales after daily expenses deducted) */}
+            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-2xs flex flex-col justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-800 shrink-0">
+                  <TrendingUp size={20} />
+                </div>
+                <div>
+                  <span className="text-[10.5px] font-bold text-slate-450 uppercase tracking-widest block">
+                    {language === 'SW' ? 'Mauzo Halisi (' : 'Net Sales ('}{timePeriod === 'TODAY' ? (language === 'SW' ? 'Leo' : 'Today') : timePeriod === 'THIS_MONTH' ? (language === 'SW' ? 'Mwezi' : 'Month') : (language === 'SW' ? 'Duka' : 'Store')})
+                  </span>
+                  <h3 className="text-base font-black text-slate-950 font-mono mt-0.5" title={activeKPIs.sales.toString()}>
+                    {settings.currencySymbol} {activeKPIs.sales.toLocaleString()}
+                  </h3>
+                </div>
               </div>
-              <div>
-                <span className="text-[10.5px] font-bold text-slate-450 uppercase tracking-widest block">
-                  {language === 'SW' ? 'Mauzo ya' : 'Sales'} ({timePeriod === 'TODAY' ? (language === 'SW' ? 'Leo' : 'Today') : timePeriod === 'THIS_MONTH' ? (language === 'SW' ? 'Mwezi' : 'Month') : (language === 'SW' ? 'Duka' : 'Store')})
-                </span>
-                <h3 className="text-base font-black text-slate-950 font-mono mt-0.5" title={activeKPIs.sales.toString()}>
-                  {settings.currencySymbol} {activeKPIs.sales.toLocaleString()}
-                </h3>
+              {activeKPIs.expenses > 0 && (
+                <div className="mt-2.5 pt-2 border-t border-slate-100 text-[10px] text-slate-500 flex items-center justify-between font-medium">
+                  <span>{language === 'SW' ? 'Ghafi:' : 'Gross:'} {settings.currencySymbol} {activeKPIs.grossSales.toLocaleString()}</span>
+                  <span className="text-rose-600 font-bold">-{settings.currencySymbol} {activeKPIs.expenses.toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Expenses Deducted Card */}
+            <div className="bg-white border border-rose-100 p-4 rounded-xl shadow-2xs flex flex-col justify-between bg-rose-50/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center text-rose-700 shrink-0">
+                  <TrendingDown size={20} />
+                </div>
+                <div>
+                  <span className="text-[10.5px] font-bold text-rose-700 uppercase tracking-widest block">
+                    {language === 'SW' ? 'Gharama za (' : 'Expenses ('}{timePeriod === 'TODAY' ? (language === 'SW' ? 'Leo' : 'Today') : timePeriod === 'THIS_MONTH' ? (language === 'SW' ? 'Mwezi' : 'Month') : (language === 'SW' ? 'Kipindi' : 'Period')})
+                  </span>
+                  <h3 className="text-base font-black text-rose-700 font-mono mt-0.5">
+                    {settings.currencySymbol} {activeKPIs.expenses.toLocaleString()}
+                  </h3>
+                </div>
+              </div>
+              <div className="mt-2.5 pt-2 border-t border-rose-150/50 text-[10px] text-rose-600 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block"></span>
+                <span>{language === 'SW' ? 'Zimejipunguza kwenye mauzo' : 'Deducted from sales'}</span>
               </div>
             </div>
 
-            {/* Profit Card */}
-            <div className="bg-gradient-to-r from-emerald-50/50 to-emerald-100/10 border border-emerald-500/20 p-4.5 rounded-xl shadow-2xs flex items-center gap-3">
-              <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white">
-                <DollarSign size={20} />
+            {/* Profit Card (Net Profit after expenses and cost price) */}
+            <div className="bg-gradient-to-r from-emerald-50/50 to-emerald-100/10 border border-emerald-500/20 p-4 rounded-xl shadow-2xs flex flex-col justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shrink-0">
+                  <DollarSign size={20} />
+                </div>
+                <div>
+                  <span className="text-[10.5px] font-black text-emerald-800 uppercase tracking-widest block">
+                    {language === 'SW' ? 'Faida Halisi (Profit)' : 'Net Profit'}
+                  </span>
+                  <h3 className="text-base font-black text-emerald-700 font-mono mt-0.5">
+                    {settings.currencySymbol} {activeKPIs.profit.toLocaleString()}
+                  </h3>
+                </div>
               </div>
-              <div>
-                <span className="text-[10.5px] font-black text-emerald-800 uppercase tracking-widest block">
-                  {language === 'SW' ? 'Faida Halisi (Profit)' : 'Net Profit'}
-                </span>
-                <h3 className="text-base font-black text-emerald-700 font-mono mt-0.5">
-                  {settings.currencySymbol} {activeKPIs.profit.toLocaleString()}
-                </h3>
+              <div className="mt-2.5 pt-2 border-t border-emerald-100 text-[10px] text-emerald-700 font-bold flex items-center justify-between">
+                <span>{language === 'SW' ? 'Baada ya gharama zote' : 'Net after all expenses'}</span>
+                <span>{activeKPIs.grossSales > 0 ? `${((activeKPIs.profit / activeKPIs.grossSales) * 100).toFixed(1)}%` : '0%'}</span>
               </div>
             </div>
 
             {/* Outstanding Receivables / debts */}
-            <div className="bg-white border border-slate-200 p-4.5 rounded-xl shadow-2xs flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-800">
-                <Users size={20} />
+            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-2xs flex flex-col justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-800 shrink-0">
+                  <Users size={20} />
+                </div>
+                <div>
+                  <span className="text-[10.5px] font-bold text-slate-455 uppercase tracking-widest block">
+                    {language === 'SW' ? 'Madeni ya Wateja' : 'Customer Debts'}
+                  </span>
+                  <h3 className="text-base font-black text-red-700 font-mono mt-0.5">
+                    {settings.currencySymbol} {metrics.debtTotal.toLocaleString()}
+                  </h3>
+                </div>
               </div>
-              <div>
-                <span className="text-[10.5px] font-bold text-slate-455 uppercase tracking-widest block">
-                  {language === 'SW' ? 'Madeni ya Wateja' : 'Customer Debts'}
-                </span>
-                <h3 className="text-base font-black text-red-700 font-mono mt-0.5">
-                  {settings.currencySymbol} {metrics.debtTotal.toLocaleString()}
-                </h3>
-              </div>
-            </div>
-
-            {/* Total completed tickets count */}
-            <div className="bg-white border border-slate-200 p-4.5 rounded-xl shadow-2xs flex items-center gap-3">
-              <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-800">
-                <FileText size={20} />
-              </div>
-              <div>
-                <span className="text-[10.5px] font-bold text-slate-450 uppercase tracking-widest block">
-                  {language === 'SW' ? 'Miamala yote (Receipts)' : 'Total Transactions'}
-                </span>
-                <h3 className="text-base font-black text-slate-950 font-mono mt-0.5">
-                  {activeKPIs.receipts} {language === 'SW' ? 'risiti' : 'receipts'}
-                </h3>
+              <div className="mt-2.5 pt-2 border-t border-slate-100 text-[10px] text-slate-500 font-medium flex items-center justify-between">
+                <span>{language === 'SW' ? 'Risiti zilizofanyika:' : 'Transactions:'}</span>
+                <strong className="text-slate-800 font-mono">{activeKPIs.receipts}</strong>
               </div>
             </div>
 
@@ -1131,20 +1291,20 @@ export default function ReportsView({ state, onNavigateToInventory }: ReportsVie
               <div>
                 <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-100 flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 bg-sky-500 rounded-full animate-pulse"></span>
-                  {language === 'SW' ? 'Hesabu ya Mtaji, Faida na Hasara' : 'Revenue, Profit & Loss Breakdown'} ({timePeriod === 'TODAY' ? (language === 'SW' ? 'Leo' : 'Today') : timePeriod === 'THIS_MONTH' ? (language === 'SW' ? 'Mwezi' : 'Month') : (language === 'SW' ? 'Muda Wote' : 'All-time')})
+                  {language === 'SW' ? 'Hesabu ya Mtaji, Gharama na Faida Halisi' : 'Revenue, Expenses & Net Profit Breakdown'} ({timePeriod === 'TODAY' ? (language === 'SW' ? 'Leo' : 'Today') : timePeriod === 'THIS_MONTH' ? (language === 'SW' ? 'Mwezi' : 'Month') : (language === 'SW' ? 'Muda Wote' : 'All-time')})
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">
                   {timePeriod === 'TODAY' 
                     ? (language === 'SW' 
-                        ? 'Kipimo na mchanganuo halisi wa mauzo, faida na bidhaa zilizopotea au kuharibika kwa siku ya Leo.' 
-                        : 'Review of today\'s total gross sales, profit, and manual stock losses / expired items.')
+                        ? 'Mchanganuo wa mauzo ya leo, gharama za siku zilizojipunguza moja kwa moja, faida halisi na hasara za bidhaa.' 
+                        : 'Review of today\'s gross sales, daily operational expenses deducted directly, net profit, and inventory losses.')
                     : timePeriod === 'THIS_MONTH'
                       ? (language === 'SW'
-                          ? 'Ripoti ya utendaji wa kifedha wa mwezi huu duka zima kwa kuzingatia mtaji dhidi ya hasara za bidhaa.'
-                          : 'Monthly store-wide financial performance metrics, matching cost price against write-off adjustments.')
+                          ? 'Ripoti ya kifedha ya mwezi huu duka zima kwa kuzingatia mauzo ghafi, gharama za mwezi na faida halisi.'
+                          : 'Monthly store-wide financial performance metrics, matching gross sales against operational expenses.')
                       : (language === 'SW'
-                          ? 'Kipimo chote tangu kuanzishwa kwa mfumo katika LedgerBox.'
-                          : 'Historical aggregate metrics compiled since store creation on LedgerBox.')
+                          ? 'Kipimo chote cha mauzo, gharama na faida halisi tangu kuanzishwa kwa mfumo katika LedgerBox.'
+                          : 'Historical aggregate metrics of gross revenue, operational expenses, and net profit since store creation.')
                   }
                 </p>
               </div>
@@ -1153,70 +1313,92 @@ export default function ReportsView({ state, onNavigateToInventory }: ReportsVie
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               
-              {/* TOTAL REVENUE */}
+              {/* GROSS REVENUE */}
               <div className="bg-slate-850 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
                 <div>
                   <span className="text-[10px] text-slate-350 uppercase tracking-widest font-black block">
-                    {language === 'SW' ? 'Jumla ya Mauzo (Revenue)' : 'Total Revenue'}
+                    {language === 'SW' ? '1. Mauzo Ghafi (Gross)' : '1. Gross Revenue'}
                   </span>
                   <p className="text-[10px] text-slate-500 font-medium mt-0.5">
                     {language === 'SW' 
-                      ? 'Thamani ya jumla ya bidhaa zilizouzwa kwa wateja kwa muda husika.' 
-                      : 'The cumulative gross sale price value of all items sold to customers.'}
+                      ? 'Thamani ya pesa za mauzo yote yaliyokusanywa bila kutoa gharama.' 
+                      : 'Total customer payment inflows before deducting expenses.'}
                   </p>
                 </div>
-                <div className="mt-2.5">
+                <div className="mt-3">
                   <h4 className="text-xl font-black text-white font-mono leading-none">
+                    {settings.currencySymbol} {activeKPIs.grossSales.toLocaleString()}
+                  </h4>
+                  <span className="text-[10.5px] text-slate-400 font-medium mt-1 block">
+                    {language === 'SW' ? 'Risiti zote:' : 'Receipts:'} <strong className="text-white font-normal">{activeKPIs.receipts}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* OPERATING EXPENSES DEDUCTED */}
+              <div className="bg-slate-850 p-4 rounded-xl border border-rose-900/40 flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] text-rose-400 uppercase tracking-widest font-black block">
+                    {language === 'SW' ? '2. Gharama za Siku (-)' : '2. Operating Expenses (-)'}
+                  </span>
+                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                    {language === 'SW' 
+                      ? 'Gharama za uendeshaji zilizojipunguza kwenye mauzo ya siku.' 
+                      : 'Operational expenses auto-deducted from today\'s sales.'}
+                  </p>
+                </div>
+                <div className="mt-3">
+                  <h4 className="text-xl font-black text-rose-400 font-mono leading-none">
+                    -{settings.currencySymbol} {activeKPIs.expenses.toLocaleString()}
+                  </h4>
+                  <span className="text-[10.5px] text-rose-300/80 font-medium mt-1 block">
+                    {language === 'SW' ? 'Zimeondolewa kwenye mauzo' : 'Auto-deducted from sales'}
+                  </span>
+                </div>
+              </div>
+
+              {/* NET REVENUE (AFTER EXPENSES) */}
+              <div className="bg-slate-850 p-4 rounded-xl border border-sky-900/40 flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] text-sky-400 uppercase tracking-widest font-black block">
+                    {language === 'SW' ? '3. Mauzo Halisi (Net)' : '3. Net Sales'}
+                  </span>
+                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                    {language === 'SW' 
+                      ? 'Mauzo yaliyobaki baada ya kutoa gharama za siku husika.' 
+                      : 'Sales balance remaining after deducting daily expenses.'}
+                  </p>
+                </div>
+                <div className="mt-3">
+                  <h4 className="text-xl font-black text-sky-300 font-mono leading-none">
                     {settings.currencySymbol} {activeKPIs.sales.toLocaleString()}
                   </h4>
                   <span className="text-[10.5px] text-slate-400 font-medium mt-1 block">
-                    {language === 'SW' ? 'Kupitia miamala:' : 'Via transactions:'} <strong className="text-white font-normal">{activeKPIs.receipts}</strong>
+                    {language === 'SW' ? 'Mauzo Ghafi - Gharama' : 'Gross Sales - Expenses'}
                   </span>
                 </div>
               </div>
 
               {/* NET PROFIT */}
-              <div className="bg-slate-850 p-4 rounded-xl border border-slate-800/80 flex flex-col justify-between">
+              <div className="bg-slate-850 p-4 rounded-xl border border-emerald-900/40 flex flex-col justify-between">
                 <div>
                   <span className="text-[10px] uppercase tracking-widest font-black block text-emerald-400">
-                    {language === 'SW' ? 'Faida ya Biashara (Net Profit)' : 'Business Net Profit'}
+                    {language === 'SW' ? '4. Faida Halisi (Profit)' : '4. Net Profit'}
                   </span>
                   <p className="text-[10px] text-slate-500 font-medium mt-0.5">
                     {language === 'SW' 
-                      ? 'Mapato halisi yaliyopatikana baada ya kutoa mtaji au gharama ya kuchukua bidhaa.' 
-                      : 'Net margin remaining after deducting product acquisition cost / buying price.'}
+                      ? 'Faida halisi baada ya kutoa mtaji wa bidhaa na gharama zote.' 
+                      : 'Net business profit after deducting COGS and expenses.'}
                   </p>
                 </div>
-                <div className="mt-2.5">
+                <div className="mt-3">
                   <h4 className="text-xl font-black text-emerald-400 font-mono leading-none">
                     {settings.currencySymbol} {activeKPIs.profit.toLocaleString()}
                   </h4>
                   <span className="text-[10.5px] text-slate-400 font-medium mt-1 block">
-                    % {language === 'SW' ? 'ya Mauzo:' : 'of Sales:'} <strong className="text-emerald-400">{activeKPIs.sales > 0 ? ((activeKPIs.profit / activeKPIs.sales) * 100).toFixed(1) : 0}%</strong>
-                  </span>
-                </div>
-              </div>
-
-              {/* LOSSES REGISTERED */}
-              <div className="bg-slate-850 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
-                <div>
-                  <span className="text-[10px] uppercase tracking-widest font-black block text-red-400">
-                    {language === 'SW' ? 'Hasara na Uharibifu (Losses)' : 'Stock Losses & Damage'}
-                  </span>
-                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">
-                    {language === 'SW' 
-                      ? 'Thamani ya mtaji uliopotea kwa bidhaa zilizopunguzwa mkono k.m. kuisha muda au kuharibika.' 
-                      : 'Capital value written off from inventory due to damage, expired batches or leakage.'}
-                  </p>
-                </div>
-                <div className="mt-2.5">
-                  <h4 className="text-xl font-black text-red-500 font-mono leading-none">
-                    {settings.currencySymbol} {activeKPIs.loss.toLocaleString()}
-                  </h4>
-                  <span className="text-[10.5px] text-slate-400 font-medium mt-1 block">
-                    {language === 'SW' ? 'Upotevu:' : 'Loss impact:'} <strong className="text-red-400">{activeKPIs.loss > 0 && activeKPIs.profit > 0 ? `${((activeKPIs.loss / activeKPIs.profit) * 100).toFixed(1)}% ya faida` : (language === 'SW' ? 'Hakuna upotevu' : 'No loss recorded')}</strong>
+                    % {language === 'SW' ? 'ya Mauzo:' : 'of Sales:'} <strong className="text-emerald-400">{activeKPIs.grossSales > 0 ? ((activeKPIs.profit / activeKPIs.grossSales) * 100).toFixed(1) : 0}%</strong>
                   </span>
                 </div>
               </div>

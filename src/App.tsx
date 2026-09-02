@@ -15,9 +15,10 @@ import OfflineSyncBanner from './components/OfflineSyncBanner';
 import ReceiptModal from './components/ReceiptModal';
 import OfflinePwaInstallModal from './components/OfflinePwaInstallModal';
 import SystemDocumentationModal from './components/SystemDocumentationModal';
+import PrivacyPolicyView from './components/PrivacyPolicyView';
 import { Transaction } from './types';
 import { 
-  ShoppingCart, Package, FileText, Users, TrendingUp, TrendingDown, Settings, User, LogOut, Brain, Sparkles, Download, FileCheck
+  ShoppingCart, Package, FileText, Users, TrendingUp, TrendingDown, Settings, User, LogOut, Brain, Sparkles, Download, FileCheck, Shield
 } from 'lucide-react';
 import LoginView from './components/LoginView';
 import { useLanguage } from './lib/translations';
@@ -31,6 +32,13 @@ export default function App() {
   const [isAiFloatingOpen, setIsAiFloatingOpen] = useState<boolean>(false);
   const [isPwaModalOpen, setIsPwaModalOpen] = useState<boolean>(false);
   const [isDocModalOpen, setIsDocModalOpen] = useState<boolean>(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState<boolean>(() => {
+    try {
+      return typeof window !== 'undefined' && (window.location.search.includes('privacy') || window.location.hash.includes('privacy'));
+    } catch {
+      return false;
+    }
+  });
   
   // Simulated cashier name with customer state
   const [cashierName, setCashierName] = useState('Brayan');
@@ -193,6 +201,17 @@ export default function App() {
             </span>
             <span className="text-[9px] bg-indigo-500/30 px-1.5 py-0.5 rounded text-indigo-200">PDF</span>
           </button>
+
+          <button
+            onClick={() => setIsPrivacyModalOpen(true)}
+            className="w-full py-2 px-3 bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/30 text-emerald-300 hover:text-emerald-200 rounded-xl text-[11px] font-bold transition flex items-center justify-between cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <Shield size={13} className="text-emerald-400" />
+              <span>{language === 'SW' ? 'Sera ya Faragha' : 'Privacy & Terms'}</span>
+            </span>
+            <span className="text-[9px] bg-emerald-500/30 px-1.5 py-0.5 rounded text-emerald-200">Legal</span>
+          </button>
         </div>
 
         {/* Tab Buttons Container */}
@@ -337,6 +356,14 @@ export default function App() {
             >
               <FileCheck size={11} className="text-indigo-400" />
               <span className="hidden sm:inline">Mwongozo PDF</span>
+            </button>
+            <button
+              onClick={() => setIsPrivacyModalOpen(true)}
+              className="p-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded flex items-center gap-1 text-[9px] font-bold cursor-pointer"
+              title="Sera ya Faragha (Privacy Policy)"
+            >
+              <Shield size={11} className="text-emerald-400" />
+              <span className="hidden sm:inline">Faragha</span>
             </button>
             <div className="flex bg-slate-950 p-0.5 rounded border border-slate-800">
               <button
@@ -549,6 +576,13 @@ export default function App() {
           isOpen={isDocModalOpen}
           onClose={() => setIsDocModalOpen(false)}
         />
+
+        {/* PRIVACY POLICY & DATA PROTECTION MODAL */}
+        {isPrivacyModalOpen && (
+          <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col">
+            <PrivacyPolicyView onClose={() => setIsPrivacyModalOpen(false)} />
+          </div>
+        )}
 
       </main>
 

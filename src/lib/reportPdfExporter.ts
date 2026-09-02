@@ -750,6 +750,8 @@ export interface TransactionsReportPdfData {
     debtPaymentsCollected?: number;
     unpaidCreditSales?: number;
     creditSales?: number;
+    grossSales?: number;
+    dailyExpenses?: number;
     totalSales: number;
     netProfit: number;
   }>;
@@ -1343,6 +1345,8 @@ export function exportDailySummaryToCsv(
     cashSales: number;
     mobileSales: number;
     creditSales: number;
+    grossSales?: number;
+    dailyExpenses?: number;
     totalSales: number;
     netProfit: number;
   }>,
@@ -1354,10 +1358,12 @@ export function exportDailySummaryToCsv(
     'Tarehe Iliyosomwa (Formatted Date)',
     'Idadi ya Miamala (Txn Count)',
     'Idadi ya Vipande (Units Sold)',
+    'Mauzo Ghafi (Gross Sales)',
+    'Gharama za Siku (Operating Expenses)',
     'Mauzo ya Taslimu (Cash Sales)',
     'Mauzo ya Simu/Mitandao (Mobile Sales)',
     'Mauzo ya Mkopo (Credit Sales)',
-    'Jumla ya Mauzo ya Siku (Daily Total Sales)',
+    'Mauzo Halisi ya Siku (Net Daily Sales)',
     'Faida Halisi ya Siku (Daily Net Profit)'
   ];
 
@@ -1366,6 +1372,8 @@ export function exportDailySummaryToCsv(
     `"${d.formattedDate}"`,
     d.transactionCount,
     d.unitsCount,
+    d.grossSales ?? d.totalSales,
+    d.dailyExpenses ?? 0,
     d.cashSales,
     d.mobileSales,
     d.creditSales,

@@ -9,7 +9,8 @@ import { useLanguage } from '../lib/translations';
 import { googleSignIn } from '../lib/firebase';
 import OfflinePwaInstallModal from './OfflinePwaInstallModal';
 import SystemDocumentationModal from './SystemDocumentationModal';
-import { FileCheck } from 'lucide-react';
+import PrivacyPolicyView from './PrivacyPolicyView';
+import { FileCheck, ShieldAlert } from 'lucide-react';
 
 interface LoginViewProps {
   state: DbState;
@@ -37,6 +38,7 @@ export default function LoginView({
 
   const [isPwaModalOpen, setIsPwaModalOpen] = useState(false);
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
   // Mode state: 'PIN_CASHIER' | 'REGISTER_ACCOUNT' | 'SWITCH_ACCOUNT'
   const [authMode, setAuthMode] = useState<'PIN_CASHIER' | 'REGISTER_ACCOUNT' | 'SWITCH_ACCOUNT'>(() => {
@@ -262,6 +264,15 @@ export default function LoginView({
               >
                 <FileCheck size={11} className="text-indigo-400 shrink-0" />
                 <span>{language === 'SW' ? 'Mwongozo PDF' : 'PDF Specs'}</span>
+              </button>
+
+              <button
+                onClick={() => setIsPrivacyModalOpen(true)}
+                className="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                title="Sera ya Faragha na Ulinzi wa Data (Privacy Policy)"
+              >
+                <Shield size={11} className="text-emerald-400 shrink-0" />
+                <span>{language === 'SW' ? 'Sera ya Faragha' : 'Privacy'}</span>
               </button>
 
               <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800">
@@ -1001,11 +1012,18 @@ export default function LoginView({
 
           </div>
 
-          <div className="mt-3.5 pt-2.5 border-t border-slate-850 flex items-center justify-between text-[10px] text-slate-500">
+          <div className="mt-3.5 pt-2.5 border-t border-slate-850 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
             <span className="flex items-center gap-1 text-slate-400">
               <CheckCircle size={12} className="text-emerald-500" />
               {t('activeOffline')}
             </span>
+            <button
+              onClick={() => setIsPrivacyModalOpen(true)}
+              className="text-emerald-400 hover:text-emerald-300 font-bold underline cursor-pointer flex items-center gap-1"
+            >
+              <Shield size={11} />
+              <span>{language === 'SW' ? 'Sera ya Faragha & Usalama wa Data (Google Verification)' : 'Privacy Policy & Data Protection (Google Verification)'}</span>
+            </button>
             <span className="font-mono text-indigo-450 uppercase font-black tracking-widest">LEDGERBOX POS v1.2</span>
           </div>
         </div>
@@ -1021,6 +1039,12 @@ export default function LoginView({
         isOpen={isDocModalOpen}
         onClose={() => setIsDocModalOpen(false)}
       />
+
+      {isPrivacyModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col">
+          <PrivacyPolicyView onClose={() => setIsPrivacyModalOpen(false)} />
+        </div>
+      )}
 
     </div>
   );

@@ -326,8 +326,9 @@ export default function TransactionReportsView({ state, language }: TransactionR
     });
 
     const totalExpenses = filteredExpenses.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+    const netSales = Math.max(0, grossSales - totalExpenses);
     const grossProfit = Math.max(0, grossSales - cogs);
-    const netProfit = grossProfit - totalExpenses;
+    const netProfit = Math.max(0, grossProfit - totalExpenses);
     const profitMargin = grossSales > 0 ? (netProfit / grossSales) * 100 : 0;
     const transactionCount = filteredTransactions.length;
     const averageOrderValue = transactionCount > 0 ? (grossSales / transactionCount) : 0;
@@ -338,6 +339,7 @@ export default function TransactionReportsView({ state, language }: TransactionR
 
     return {
       grossSales,
+      netSales,
       cogs,
       grossProfit,
       totalExpenses,
@@ -357,20 +359,20 @@ export default function TransactionReportsView({ state, language }: TransactionR
     };
   }, [filteredTransactions, filteredDebtLogs, filteredExpenses, language]);
 
-  // Timeline / Daily Trend Data for Chart
+  // Timeline / Daily Trend Data for Chart (Net Sales & Net Profit per day after deducting expenses)
   const timelineChartData = useMemo(() => {
-    const dayMap = new Map<string, { dateStr: string; label: string; sales: number; profit: number; count: number }>();
+    const dayMap = new Map<string, { dateStr: string; label: string; grossSales: number; expenses: number; sales: number; profit: number; count: number }>();
 
     filteredTransactions.forEach(tx => {
       const d = new Date(tx.timestamp);
-      const dateKey = d.toISOString().split('T')[0];
-      const shortDate = `${d.getDate()}/${d.getMonth() + 1}`;
+      const dateKey = isNaN(d.getTime()) ? 'unknown' : d.toISOString().split('T')[0];
+      const shortDate = isNaN(d.getTime()) ? '-' : `${d.getDate()}/${d.getMonth() + 1}`;
 
-      const existing = dayMap.get(dateKey) || { dateStr: dateKey, label: shortDate, sales: 0, profit: 0, count: 0 };
+      const existing = dayMap.get(dateKey) || { dateStr: dateKey, label: shortDate, grossSales: 0, expenses: 0, sales: 0, profit: 0, count: 0 };
       
       const isCredit = tx.paymentMethod === 'CREDIT';
       const paidPortion = isCredit ? (tx.receivedAmount || 0) : (tx.total || 0);
-      existing.sales += paidPortion;
+      existing.grossSales += paidPortion;
       existing.count += 1;
 
       let txCost = 0;
@@ -384,20 +386,35 @@ export default function TransactionReportsView({ state, language }: TransactionR
     filteredDebtLogs.forEach((log: any) => {
       if (log.type === 'PAYMENT') {
         const d = new Date(log.timestamp);
-        const dateKey = d.toISOString().split('T')[0];
-        const shortDate = `${d.getDate()}/${d.getMonth() + 1}`;
+        const dateKey = isNaN(d.getTime()) ? 'unknown' : d.toISOString().split('T')[0];
+        const shortDate = isNaN(d.getTime()) ? '-' : `${d.getDate()}/${d.getMonth() + 1}`;
 
-        const existing = dayMap.get(dateKey) || { dateStr: dateKey, label: shortDate, sales: 0, profit: 0, count: 0 };
-        existing.sales += (log.amount || 0);
-        existing.profit += (log.amount || 0);
+        const existing = dayMap.get(dateKey) || { dateStr: dateKey, label: shortDate, grossSales: 0, expenses: 0, sales: 0, profit: 0, count: 0 };
+        const amt = (log.amount || 0);
+        existing.grossSales += amt;
+        existing.profit += amt;
         dayMap.set(dateKey, existing);
       }
     });
 
-    return Array.from(dayMap.values()).sort((a, b) => a.dateStr.localeCompare(b.dateStr));
-  }, [filteredTransactions, filteredDebtLogs]);
+    filteredExpenses.forEach((exp: any) => {
+      const d = new Date(exp.timestamp || exp.date);
+      const dateKey = isNaN(d.getTime()) ? (exp.date ? exp.date.split('T')[0] : 'unknown') : d.toISOString().split('T')[0];
+      const shortDate = isNaN(d.getTime()) ? '-' : `${d.getDate()}/${d.getMonth() + 1}`;
 
-  // Aggregated Daily Data (Sum up amount of transactions per specific date & sync debt payments)
+      const existing = dayMap.get(dateKey) || { dateStr: dateKey, label: shortDate, grossSales: 0, expenses: 0, sales: 0, profit: 0, count: 0 };
+      existing.expenses += (exp.amount || 0);
+      dayMap.set(dateKey, existing);
+    });
+
+    return Array.from(dayMap.values()).map(d => {
+      d.sales = Math.max(0, d.grossSales - d.expenses);
+      d.profit = Math.max(0, d.profit - d.expenses);
+      return d;
+    }).sort((a, b) => a.dateStr.localeCompare(b.dateStr));
+  }, [filteredTransactions, filteredDebtLogs, filteredExpenses]);
+
+  // Aggregated Daily Data (Sum up amount of transactions per specific date, sync debt payments & auto-deduct daily expenses)
   const dailySummary = useMemo(() => {
     const dayMap = new Map<string, {
       dateKey: string;
@@ -411,14 +428,17 @@ export default function TransactionReportsView({ state, language }: TransactionR
       creditSales: number; // Unpaid credit sales (not added to sales!)
       debtPaymentsCollected: number; // Debt payments collected & synced on this date
       otherSales: number;
-      totalSales: number; // Realized daily sales
+      grossSales: number; // Gross daily revenue before expense deduction
+      dailyExpenses: number; // Operating expenses logged on this date
+      totalSales: number; // Net daily sales (Gross Sales - Daily Expenses)
       totalDiscount: number;
       totalCogs: number;
-      netProfit: number;
+      netProfit: number; // Net profit after COGS and daily expenses deduction
       profitMargin: number;
       avgTransaction: number;
       transactions: Transaction[];
       debtLogs: DebtLog[];
+      expenses: any[];
     }>();
 
     const dayNamesSw = ['Jumapili', 'Jumatatu', 'Jumanne', 'Jumatano', 'Alhamisi', 'Ijumaa', 'Jumamosi'];
@@ -446,6 +466,8 @@ export default function TransactionReportsView({ state, language }: TransactionR
           creditSales: 0,
           debtPaymentsCollected: 0,
           otherSales: 0,
+          grossSales: 0,
+          dailyExpenses: 0,
           totalSales: 0,
           totalDiscount: 0,
           totalCogs: 0,
@@ -453,7 +475,8 @@ export default function TransactionReportsView({ state, language }: TransactionR
           profitMargin: 0,
           avgTransaction: 0,
           transactions: [],
-          debtLogs: []
+          debtLogs: [],
+          expenses: []
         };
         dayMap.set(dateKey, dayRecord);
       }
@@ -474,8 +497,8 @@ export default function TransactionReportsView({ state, language }: TransactionR
       const isCredit = pm === 'CREDIT';
       const paidPortion = isCredit ? (tx.receivedAmount || 0) : (tx.total || 0);
 
-      // Realized Sales add cash/mobile/other or downpayment (NB: Unpaid credit is NOT added to sales total)
-      dayRecord.totalSales += paidPortion;
+      // Gross Realized Sales from checkout
+      dayRecord.grossSales += paidPortion;
 
       if (isCredit) {
         dayRecord.creditSales += ((tx.total || 0) - (tx.receivedAmount || 0));
@@ -519,7 +542,7 @@ export default function TransactionReportsView({ state, language }: TransactionR
       if (log.type === 'PAYMENT') {
         const amt = (log.amount || 0);
         dayRecord.debtPaymentsCollected += amt;
-        dayRecord.totalSales += amt; // SYNC TO REALIZED SALES OF THIS DATE!
+        dayRecord.grossSales += amt; // SYNC TO REALIZED SALES OF THIS DATE!
 
         const method = (log.paymentMethod || 'CASH').toUpperCase();
         if (method === 'CASH') {
@@ -540,16 +563,30 @@ export default function TransactionReportsView({ state, language }: TransactionR
       }
     });
 
+    // 3. Compile Operating Expenses for this date (Auto-deduct from Daily Sales & Profit)
+    filteredExpenses.forEach((exp: any) => {
+      const d = new Date(exp.timestamp || exp.date);
+      const dateKey = isNaN(d.getTime()) ? (exp.date ? exp.date.split('T')[0] : 'unknown') : d.toISOString().split('T')[0];
+      const dayRecord = getOrCreateDayRecord(d, dateKey, exp.timestamp || exp.date);
+
+      dayRecord.expenses.push(exp);
+      dayRecord.dailyExpenses += (exp.amount || 0);
+    });
+
     const list = Array.from(dayMap.values()).map(d => {
-      d.netProfit = Math.max(0, d.totalSales - d.totalCogs);
-      d.profitMargin = d.totalSales > 0 ? (d.netProfit / d.totalSales) * 100 : 0;
-      d.avgTransaction = d.transactionCount > 0 ? (d.totalSales / d.transactionCount) : 0;
+      // Net Sales = Gross Sales minus Daily Expenses
+      d.totalSales = Math.max(0, d.grossSales - d.dailyExpenses);
+      // Net Profit = (Gross Sales - COGS) minus Daily Expenses
+      const grossProfit = Math.max(0, d.grossSales - d.totalCogs);
+      d.netProfit = Math.max(0, grossProfit - d.dailyExpenses);
+      d.profitMargin = d.grossSales > 0 ? (d.netProfit / d.grossSales) * 100 : 0;
+      d.avgTransaction = d.transactionCount > 0 ? (d.grossSales / d.transactionCount) : 0;
       return d;
     });
 
     // Sort descending by date (newest first)
     return list.sort((a, b) => b.dateKey.localeCompare(a.dateKey));
-  }, [filteredTransactions, filteredDebtLogs, language]);
+  }, [filteredTransactions, filteredDebtLogs, filteredExpenses, language]);
 
   // Filtered daily breakdown according to search query
   const filteredDailySummary = useMemo(() => {
@@ -565,6 +602,11 @@ export default function TransactionReportsView({ state, language }: TransactionR
           (tx.customerName && tx.customerName.toLowerCase().includes(q)) ||
           (tx.cashierName && tx.cashierName.toLowerCase().includes(q)) ||
           (tx.items && tx.items.some(it => it.product?.name?.toLowerCase().includes(q)))
+        ) ||
+        d.expenses.some(exp => 
+          (exp.title && exp.title.toLowerCase().includes(q)) ||
+          (exp.category && exp.category.toLowerCase().includes(q)) ||
+          (exp.recordedBy && exp.recordedBy.toLowerCase().includes(q))
         )
       );
     });
@@ -594,6 +636,8 @@ export default function TransactionReportsView({ state, language }: TransactionR
       formattedDate: string;
       dayOfWeek: string;
       transactions: Transaction[];
+      grossSubtotal: number;
+      dailyExpenses: number;
       subtotal: number;
       totalProfit: number;
     }>();
@@ -617,6 +661,8 @@ export default function TransactionReportsView({ state, language }: TransactionR
           formattedDate,
           dayOfWeek,
           transactions: [],
+          grossSubtotal: 0,
+          dailyExpenses: 0,
           subtotal: 0,
           totalProfit: 0
         };
@@ -624,17 +670,32 @@ export default function TransactionReportsView({ state, language }: TransactionR
       }
 
       grp.transactions.push(tx);
-      grp.subtotal += (tx.total || 0);
+      const isCredit = tx.paymentMethod === 'CREDIT';
+      const paidPortion = isCredit ? (tx.receivedAmount || 0) : (tx.total || 0);
+      grp.grossSubtotal += paidPortion;
 
       let txCost = 0;
       tx.items?.forEach(it => {
         txCost += (it.product?.costPrice || 0) * (it.quantity || 1);
       });
-      grp.totalProfit += Math.max(0, (tx.total || 0) - txCost);
+      grp.totalProfit += Math.max(0, paidPortion - txCost);
     });
 
-    return Array.from(groups.values()).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
-  }, [tableRows, language]);
+    filteredExpenses.forEach((exp: any) => {
+      const d = new Date(exp.timestamp || exp.date);
+      const dateKey = isNaN(d.getTime()) ? (exp.date ? exp.date.split('T')[0] : 'unknown') : d.toISOString().split('T')[0];
+      let grp = groups.get(dateKey);
+      if (grp) {
+        grp.dailyExpenses += (exp.amount || 0);
+      }
+    });
+
+    return Array.from(groups.values()).map(grp => {
+      grp.subtotal = Math.max(0, grp.grossSubtotal - grp.dailyExpenses);
+      grp.totalProfit = Math.max(0, grp.totalProfit - grp.dailyExpenses);
+      return grp;
+    }).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
+  }, [tableRows, filteredExpenses, language]);
 
   // Credit items inside current filtered date range (Vitu vilivyouzwa kwa mkopo)
   const periodCreditItems = useMemo(() => {
@@ -821,6 +882,8 @@ export default function TransactionReportsView({ state, language }: TransactionR
           cashSales: d.cashSales,
           mobileSales: d.mobileSales,
           creditSales: d.creditSales,
+          grossSales: d.grossSales,
+          dailyExpenses: d.dailyExpenses,
           totalSales: d.totalSales,
           netProfit: d.netProfit
         })),
@@ -880,6 +943,8 @@ export default function TransactionReportsView({ state, language }: TransactionR
       cashSales: d.cashSales,
       mobileSales: d.mobileSales,
       creditSales: d.creditSales,
+      grossSales: d.grossSales,
+      dailyExpenses: d.dailyExpenses,
       totalSales: d.totalSales,
       netProfit: d.netProfit
     }));
@@ -1507,22 +1572,22 @@ export default function TransactionReportsView({ state, language }: TransactionR
           </div>
         </div>
 
-        {/* 1. DAILY AGGREGATED BREAKDOWN (SUM UP AMOUNT YA KILA TAREHE & DEBT REPAYMENTS SYNC) */}
+        {/* 1. DAILY AGGREGATED BREAKDOWN (SUM UP AMOUNT YA KILA TAREHE, DEBT REPAYMENTS SYNC & DAILY EXPENSES DEDUCTION) */}
         {tableViewMode === 'DAILY_SUMMARY' && (
           <div className="overflow-x-auto">
-            {/* Informational Callout regarding Debts & Sales Syncing */}
-            <div className="p-3 bg-amber-50/70 border-b border-amber-200/60 text-amber-900 text-xs flex items-center justify-between gap-2">
+            {/* Informational Callout regarding Debts, Expenses & Sales Syncing */}
+            <div className="p-3 bg-indigo-50/80 border-b border-indigo-200/60 text-indigo-950 text-xs flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Info size={16} className="text-amber-700 shrink-0" />
+                <Info size={16} className="text-indigo-700 shrink-0" />
                 <span>
                   {language === 'SW'
-                    ? 'Kanuni ya Mauzo: Miamala ya mkopo (madeni mapya) haiongezwi kwenye mauzo ya siku hadi pale inapolipwa. Marejesho na malipo ya madeni yanasawazishwa moja kwa moja kwenye tarehe ambayo malipo hayo yamefanyika.'
-                    : 'Revenue Policy: Credit sales are excluded from daily revenue until paid. Debt repayments sync directly to sales on the date payment is recorded.'}
+                    ? 'Kanuni ya Mauzo & Faida: Miamala ya mkopo haiongezwi hadi ilipwe. Marejesho yanasawazishwa kwenye mauzo ya siku husika, na Gharama za Uendeshaji za siku zinajipunguza moja kwa moja kwenye mauzo na faida halisi ya siku.'
+                    : 'Revenue & Profit Policy: Credit sales are excluded until paid. Debt repayments sync directly to daily sales, and daily operational expenses automatically deduct from daily sales & net profit.'}
                 </span>
               </div>
             </div>
 
-            <table className="w-full text-left text-xs border-collapse min-w-[920px]">
+            <table className="w-full text-left text-xs border-collapse min-w-[1020px]">
               <thead>
                 <tr className="bg-slate-100/90 text-slate-700 font-extrabold uppercase text-[10px] tracking-wider border-b border-slate-200">
                   <th className="py-3 px-4 w-10 text-center">#</th>
@@ -1531,7 +1596,10 @@ export default function TransactionReportsView({ state, language }: TransactionR
                   <th className="py-3 px-3 text-right">{language === 'SW' ? 'Taslimu (Cash)' : 'Cash'}</th>
                   <th className="py-3 px-3 text-right">{language === 'SW' ? 'Simu / Mitandao' : 'Mobile'}</th>
                   <th className="py-3 px-3 text-right text-emerald-700 bg-emerald-50/40">
-                    {language === 'SW' ? 'Marejesho ya Deni' : 'Debt Repaid'}
+                    {language === 'SW' ? 'Marejesho (+)' : 'Debt Repaid (+)'}
+                  </th>
+                  <th className="py-3 px-3 text-right text-rose-700 bg-rose-50/40">
+                    {language === 'SW' ? 'Gharama (-)' : 'Expenses (-)'}
                   </th>
                   <th className="py-3 px-3 text-right text-amber-700 bg-amber-50/40">
                     {language === 'SW' ? 'Madeni Mapya' : 'Credit (Unpaid)'}
@@ -1603,6 +1671,17 @@ export default function TransactionReportsView({ state, language }: TransactionR
                             )}
                           </td>
 
+                          {/* Daily Operating Expenses (Deducted from sales) */}
+                          <td className="py-3.5 px-3 text-right font-mono font-bold text-rose-700 bg-rose-50/30">
+                            {day.dailyExpenses > 0 ? (
+                              <span className="text-rose-700" title="Zimekatwa moja kwa moja kwenye mauzo na faida">
+                                -{currency} {day.dailyExpenses.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+
                           {/* Credit Sales (Unpaid) */}
                           <td className="py-3.5 px-3 text-right font-mono text-amber-700 bg-amber-50/30">
                             {day.creditSales > 0 ? (
@@ -1614,7 +1693,7 @@ export default function TransactionReportsView({ state, language }: TransactionR
                             )}
                           </td>
 
-                          {/* Daily Sum Amount (HIGHLIGHTED) */}
+                          {/* Daily Sum Amount (Net Daily Sales after expenses deduction) */}
                           <td className="py-3.5 px-4 text-right font-mono font-black text-indigo-700 bg-indigo-50/50 text-sm">
                             {currency} {day.totalSales.toLocaleString()}
                           </td>
@@ -1640,39 +1719,54 @@ export default function TransactionReportsView({ state, language }: TransactionR
                           </td>
                         </tr>
 
-                        {/* Accordion: Itemized Transactions & Debt Sync Details for this Day */}
+                        {/* Accordion: Itemized Transactions, Debt Sync Details & Daily Expenses for this Day */}
                         {isExpanded && (
                           <tr className="bg-indigo-50/20 border-y border-indigo-100">
-                            <td colSpan={10} className="p-4 sm:p-5">
+                            <td colSpan={11} className="p-4 sm:p-5">
                               <div className="bg-white border border-indigo-100 rounded-2xl p-4 shadow-3xs space-y-4">
                                 {/* Header and Day Summary Badges */}
                                 <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
                                   <div className="flex items-center gap-2">
                                     <CalendarDays size={16} className="text-indigo-600" />
                                     <span className="font-extrabold text-xs text-slate-900 uppercase tracking-wider">
-                                      {language === 'SW' ? `Mchanganuo wa Mauzo na Madeni: ${day.formattedDate}` : `Breakdown for ${day.formattedDate}`}
+                                      {language === 'SW' ? `Mchanganuo Kamili wa Siku: ${day.formattedDate}` : `Full Daily Breakdown: ${day.formattedDate}`}
                                     </span>
                                   </div>
-                                  <div className="flex flex-wrap items-center gap-3 text-xs font-bold">
+                                  <div className="flex flex-wrap items-center gap-2.5 text-xs font-bold">
                                     <div className="bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-slate-700">
-                                      {language === 'SW' ? 'Mauzo ya Miamala:' : 'Txn Sales:'}{' '}
+                                      {language === 'SW' ? 'Mauzo Ghafi:' : 'Gross Revenue:'}{' '}
                                       <span className="font-mono text-slate-900">
-                                        {currency} {(day.totalSales - day.debtPaymentsCollected).toLocaleString()}
+                                        {currency} {day.grossSales.toLocaleString()}
                                       </span>
                                     </div>
                                     {day.debtPaymentsCollected > 0 && (
                                       <div className="bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl text-emerald-800 flex items-center gap-1">
                                         <CheckCircle2 size={12} className="text-emerald-600" />
-                                        {language === 'SW' ? 'Marejesho ya Deni:' : 'Debt Repaid:'}{' '}
+                                        {language === 'SW' ? 'Marejesho:' : 'Repaid:'}{' '}
                                         <span className="font-mono text-emerald-900 font-black">
                                           +{currency} {day.debtPaymentsCollected.toLocaleString()}
                                         </span>
                                       </div>
                                     )}
+                                    {day.dailyExpenses > 0 && (
+                                      <div className="bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-xl text-rose-800 flex items-center gap-1">
+                                        <TrendingDown size={12} className="text-rose-600" />
+                                        {language === 'SW' ? 'Gharama Zilizokatwa:' : 'Expenses Deducted:'}{' '}
+                                        <span className="font-mono text-rose-900 font-black">
+                                          -{currency} {day.dailyExpenses.toLocaleString()}
+                                        </span>
+                                      </div>
+                                    )}
                                     <div className="bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-xl text-indigo-900">
-                                      {language === 'SW' ? 'Jumla ya Mauzo ya Siku Hii:' : 'Day Total Revenue:'}{' '}
+                                      {language === 'SW' ? 'Mauzo Halisi ya Siku:' : 'Net Day Revenue:'}{' '}
                                       <span className="text-indigo-700 font-mono font-black text-sm">
                                         {currency} {day.totalSales.toLocaleString()}
+                                      </span>
+                                    </div>
+                                    <div className="bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl text-emerald-900">
+                                      {language === 'SW' ? 'Faida Halisi:' : 'Net Profit:'}{' '}
+                                      <span className="text-emerald-700 font-mono font-black text-sm">
+                                        +{currency} {day.netProfit.toLocaleString()}
                                       </span>
                                     </div>
                                   </div>
@@ -1703,45 +1797,45 @@ export default function TransactionReportsView({ state, language }: TransactionR
                                       <tbody className="divide-y divide-slate-100">
                                         {day.transactions.length > 0 ? (
                                           day.transactions.map((tx, tIdx) => {
-                                            const tDate = new Date(tx.timestamp);
-                                            const timeStr = isNaN(tDate.getTime()) ? '-' : tDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                            const itemsSummary = tx.items?.map(it => `${it.product?.name || 'Item'} (${it.quantity || 1})`).join(', ') || '-';
-                                            const isCredit = tx.paymentMethod === 'CREDIT';
+                                             const tDate = new Date(tx.timestamp);
+                                             const timeStr = isNaN(tDate.getTime()) ? '-' : tDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                             const itemsSummary = tx.items?.map(it => `${it.product?.name || 'Item'} (${it.quantity || 1})`).join(', ') || '-';
+                                             const isCredit = tx.paymentMethod === 'CREDIT';
 
-                                            return (
-                                              <tr key={tx.id || tIdx} className="hover:bg-slate-50">
-                                                <td className="py-2 px-3 font-mono text-slate-500">{timeStr}</td>
-                                                <td className="py-2 px-3 font-mono font-bold text-indigo-700">{tx.id?.substring(0, 10)}</td>
-                                                <td className="py-2 px-3">
-                                                  <span className="font-bold text-slate-800">{tx.customerName || (language === 'SW' ? 'Mteja wa Kawaida' : 'Walk-in')}</span>
-                                                  {tx.cashierName && <span className="text-[10px] text-slate-400 ml-1.5">({tx.cashierName})</span>}
-                                                </td>
-                                                <td className="py-2 px-3">
-                                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-black font-mono uppercase ${
-                                                    isCredit ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
-                                                  }`}>
-                                                    {tx.paymentMethod}
-                                                  </span>
-                                                </td>
-                                                <td className="py-2 px-3 text-slate-600 max-w-xs truncate" title={itemsSummary}>
-                                                  {itemsSummary}
-                                                </td>
-                                                <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
-                                                  {currency} {tx.total.toLocaleString()}
-                                                </td>
-                                                <td className="py-2 px-3 text-center">
-                                                  {isCredit ? (
-                                                    <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-md">
-                                                      {language === 'SW' ? 'Mkopo (Haujaongezwa Mauzo)' : 'Credit (Deferred)'}
-                                                    </span>
-                                                  ) : (
-                                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md">
-                                                      {language === 'SW' ? 'Mauzo Halisi (Imelipwa)' : 'Realized Sales'}
-                                                    </span>
-                                                  )}
-                                                </td>
-                                              </tr>
-                                            );
+                                             return (
+                                               <tr key={tx.id || tIdx} className="hover:bg-slate-50">
+                                                 <td className="py-2 px-3 font-mono text-slate-500">{timeStr}</td>
+                                                 <td className="py-2 px-3 font-mono font-bold text-indigo-700">{tx.id?.substring(0, 10)}</td>
+                                                 <td className="py-2 px-3">
+                                                   <span className="font-bold text-slate-800">{tx.customerName || (language === 'SW' ? 'Mteja wa Kawaida' : 'Walk-in')}</span>
+                                                   {tx.cashierName && <span className="text-[10px] text-slate-400 ml-1.5">({tx.cashierName})</span>}
+                                                 </td>
+                                                 <td className="py-2 px-3">
+                                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-black font-mono uppercase ${
+                                                     isCredit ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+                                                   }`}>
+                                                     {tx.paymentMethod}
+                                                   </span>
+                                                 </td>
+                                                 <td className="py-2 px-3 text-slate-600 max-w-xs truncate" title={itemsSummary}>
+                                                   {itemsSummary}
+                                                 </td>
+                                                 <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
+                                                   {currency} {tx.total.toLocaleString()}
+                                                 </td>
+                                                 <td className="py-2 px-3 text-center">
+                                                   {isCredit ? (
+                                                     <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-md">
+                                                       {language === 'SW' ? 'Mkopo (Haujaongezwa Mauzo)' : 'Credit (Deferred)'}
+                                                     </span>
+                                                   ) : (
+                                                     <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md">
+                                                       {language === 'SW' ? 'Mauzo Halisi (Imelipwa)' : 'Realized Sales'}
+                                                     </span>
+                                                   )}
+                                                 </td>
+                                               </tr>
+                                             );
                                           })
                                         ) : (
                                           <tr>
@@ -1812,7 +1906,62 @@ export default function TransactionReportsView({ state, language }: TransactionR
                                   </div>
                                 )}
 
-                                {/* SECTION 3: NEW DEBTS INCURRED ON THIS DATE */}
+                                {/* SECTION 3: OPERATING EXPENSES DEDUCTED ON THIS DATE */}
+                                {day.expenses.length > 0 && (
+                                  <div className="border border-rose-200 bg-rose-50/20 rounded-xl p-3">
+                                    <h5 className="font-bold text-xs text-rose-900 flex items-center gap-1.5 uppercase tracking-wider text-[11px] mb-2">
+                                      <TrendingDown size={14} className="text-rose-600" />
+                                      {language === 'SW' ? 'Gharama za Siku Zilizojipunguza Kwenye Mauzo & Faida' : 'Daily Operating Expenses Deducted from Sales & Profit'} ({day.expenses.length})
+                                    </h5>
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-left text-xs border-collapse">
+                                        <thead>
+                                          <tr className="bg-rose-100/60 text-rose-900 font-bold uppercase text-[9px] tracking-wider border-b border-rose-200">
+                                            <th className="py-2 px-3">{language === 'SW' ? 'Muda' : 'Time'}</th>
+                                            <th className="py-2 px-3">{language === 'SW' ? 'Aina ya Gharama' : 'Expense Title'}</th>
+                                            <th className="py-2 px-3">{language === 'SW' ? 'Kundi' : 'Category'}</th>
+                                            <th className="py-2 px-3">{language === 'SW' ? 'Aliyerekodi' : 'Recorded By'}</th>
+                                            <th className="py-2 px-3 text-right">{language === 'SW' ? 'Kiasi (TZS)' : 'Amount'}</th>
+                                            <th className="py-2 px-3 text-center">{language === 'SW' ? 'Hali' : 'Status'}</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-rose-100">
+                                          {day.expenses.map((exp: any, eIdx: number) => {
+                                            const eDate = new Date(exp.timestamp || exp.date);
+                                            const timeStr = isNaN(eDate.getTime()) ? '-' : eDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                                            return (
+                                              <tr key={exp.id || eIdx} className="hover:bg-rose-50/40">
+                                                <td className="py-2 px-3 font-mono text-slate-600">{timeStr}</td>
+                                                <td className="py-2 px-3 font-bold text-slate-800">
+                                                  {exp.title || exp.name || (language === 'SW' ? 'Gharama ya Uendeshaji' : 'Operating Expense')}
+                                                </td>
+                                                <td className="py-2 px-3">
+                                                  <span className="px-2 py-0.5 rounded text-[9px] font-medium bg-slate-100 text-slate-700">
+                                                    {exp.category || 'General'}
+                                                  </span>
+                                                </td>
+                                                <td className="py-2 px-3 text-slate-600">
+                                                  {exp.recordedBy || 'Admin'}
+                                                </td>
+                                                <td className="py-2 px-3 text-right font-mono font-bold text-rose-700">
+                                                  -{currency} {(exp.amount || 0).toLocaleString()}
+                                                </td>
+                                                <td className="py-2 px-3 text-center">
+                                                  <span className="bg-rose-100 text-rose-800 border border-rose-200 font-bold text-[9px] px-2 py-0.5 rounded-full">
+                                                    {language === 'SW' ? 'Imeondolewa Mauzo ya Siku' : 'Deducted from Day'}
+                                                  </span>
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* SECTION 4: NEW DEBTS INCURRED ON THIS DATE */}
                                 {borrowDebtLogs.length > 0 && (
                                   <div className="border border-amber-200 bg-amber-50/20 rounded-xl p-3">
                                     <h5 className="font-bold text-xs text-amber-900 flex items-center gap-1.5 uppercase tracking-wider text-[11px] mb-2">
@@ -1875,7 +2024,7 @@ export default function TransactionReportsView({ state, language }: TransactionR
                   })
                 ) : (
                   <tr>
-                    <td colSpan={10} className="py-8 text-center text-slate-400 italic">
+                    <td colSpan={11} className="py-8 text-center text-slate-400 italic">
                       {language === 'SW' ? 'Hakuna data ya mauzo kwa tarehe zilizochaguliwa' : 'No sales records found for selected dates'}
                     </td>
                   </tr>
@@ -1901,6 +2050,9 @@ export default function TransactionReportsView({ state, language }: TransactionR
                     </td>
                     <td className="py-4 px-3 text-right font-mono text-emerald-300 font-bold bg-slate-800/60">
                       +{currency} {filteredDailySummary.reduce((s, d) => s + d.debtPaymentsCollected, 0).toLocaleString()}
+                    </td>
+                    <td className="py-4 px-3 text-right font-mono text-rose-400 font-bold bg-slate-800/60">
+                      -{currency} {filteredDailySummary.reduce((s, d) => s + d.dailyExpenses, 0).toLocaleString()}
                     </td>
                     <td className="py-4 px-3 text-right font-mono text-amber-300 bg-slate-800/60">
                       {currency} {filteredDailySummary.reduce((s, d) => s + d.creditSales, 0).toLocaleString()}
@@ -1942,13 +2094,19 @@ export default function TransactionReportsView({ state, language }: TransactionR
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-4 text-xs">
+                    <div className="flex flex-wrap items-center gap-3 text-xs">
+                      {grp.dailyExpenses > 0 && (
+                        <div className="bg-rose-950/60 px-2.5 py-1 rounded-xl border border-rose-700/50">
+                          <span className="text-rose-200 mr-1.5">{language === 'SW' ? 'Gharama:' : 'Expenses:'}</span>
+                          <span className="text-rose-300 font-mono font-bold">-{currency} {grp.dailyExpenses.toLocaleString()}</span>
+                        </div>
+                      )}
                       <div>
-                        <span className="text-indigo-200 mr-1.5">{language === 'SW' ? 'Faida ya Siku:' : 'Daily Profit:'}</span>
+                        <span className="text-indigo-200 mr-1.5">{language === 'SW' ? 'Faida Halisi:' : 'Net Profit:'}</span>
                         <span className="text-emerald-300 font-mono font-bold">+{currency} {grp.totalProfit.toLocaleString()}</span>
                       </div>
                       <div className="bg-indigo-950/60 px-3 py-1 rounded-xl border border-indigo-700/50">
-                        <span className="text-indigo-200 mr-1.5">{language === 'SW' ? 'Jumla ya Siku:' : 'Daily Total:'}</span>
+                        <span className="text-indigo-200 mr-1.5">{language === 'SW' ? 'Mauzo Halisi:' : 'Net Sales:'}</span>
                         <span className="text-emerald-400 font-mono font-black text-sm">
                           {currency} {grp.subtotal.toLocaleString()}
                         </span>
