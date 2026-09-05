@@ -440,6 +440,7 @@ export default function App() {
               addSupplier={store.addSupplier}
               updateSupplier={store.updateSupplier}
               deleteSupplier={store.deleteSupplier}
+              clearAllSuppliers={store.clearAllSuppliers}
             />
           )}
           {activeTab === 'EXPENSES' && (

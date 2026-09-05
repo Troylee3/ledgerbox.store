@@ -139,7 +139,7 @@ export default function GoogleContactsModal({
 
   const handleSignIn = async () => {
     try {
-      const result = await googleSignIn();
+      const result = await googleSignIn(['https://www.googleapis.com/auth/contacts.readonly']);
       if (result) {
         setUser(result.user);
         setAccessToken(result.accessToken);

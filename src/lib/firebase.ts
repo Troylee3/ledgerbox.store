@@ -100,20 +100,26 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Configure Google OAuth Provider with Sheets, Drive, and Contacts scopes
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
-googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
-googleProvider.addScope('https://www.googleapis.com/auth/contacts');
-googleProvider.addScope('https://www.googleapis.com/auth/contacts.other.readonly');
-googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
-googleProvider.addScope('https://www.googleapis.com/auth/directory.readonly');
-googleProvider.addScope('https://www.googleapis.com/auth/user.addresses.read');
-googleProvider.addScope('https://www.googleapis.com/auth/user.birthday.read');
-googleProvider.addScope('https://www.googleapis.com/auth/user.emails.read');
-googleProvider.addScope('https://www.googleapis.com/auth/user.gender.read');
-googleProvider.addScope('https://www.googleapis.com/auth/user.organization.read');
-googleProvider.addScope('https://www.googleapis.com/auth/user.phonenumbers.read');
+// Configure Google OAuth Provider
+// For primary authentication, request only standard profile & email scopes
+// This avoids CASA / restricted scope blocks and works seamlessly with verified domain ledgerbox.store
+export function createGoogleProvider(extraScopes: string[] = []): GoogleAuthProvider {
+  const provider = new GoogleAuthProvider();
+  provider.addScope('email');
+  provider.addScope('profile');
+  provider.addScope('openid');
+  provider.setCustomParameters({
+    prompt: 'select_account'
+  });
+  if (extraScopes && extraScopes.length > 0) {
+    extraScopes.forEach(scope => {
+      if (scope) provider.addScope(scope);
+    });
+  }
+  return provider;
+}
+
+export const googleProvider = createGoogleProvider();
 
 // Flag to indicate if we are in the middle of a sign-in flow.
 let isSigningIn = false;
@@ -127,11 +133,12 @@ export const initAuth = (
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
-      if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
-      } else if (!isSigningIn) {
-        // Clear if not in explicit signing in flow
-        cachedAccessToken = null;
+      try {
+        const token = cachedAccessToken || (await user.getIdToken());
+        cachedAccessToken = token;
+        if (onAuthSuccess) onAuthSuccess(user, token);
+      } catch (err) {
+        console.warn('Failed to retrieve token for authenticated user:', err);
         if (onAuthFailure) onAuthFailure();
       }
     } else {
@@ -142,31 +149,47 @@ export const initAuth = (
 };
 
 // Must be called from a button click or user interaction
-export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
+export const googleSignIn = async (extraScopes?: string[]): Promise<{ user: User; accessToken: string } | null> => {
   try {
     isSigningIn = true;
-    const result = await signInWithPopup(auth, googleProvider);
+    const provider = (extraScopes && extraScopes.length > 0) 
+      ? createGoogleProvider(extraScopes) 
+      : googleProvider;
+      
+    const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error('Failed to get access token from Google Auth Provider');
-    }
+    
+    // Safely retrieve token: OAuth access token if available, or Firebase ID token.
+    // Never throws an error if accessToken is absent for standard profile sign in!
+    const token = credential?.accessToken || (await result.user.getIdToken());
+    cachedAccessToken = token;
 
-    cachedAccessToken = credential.accessToken;
-    return { user: result.user, accessToken: cachedAccessToken };
+    return { user: result.user, accessToken: token };
   } catch (error: any) {
     const errorCode = error?.code || 'auth/unknown';
     const errorMessage = error?.message || String(error);
     console.warn(`[Firebase Auth] Google Sign-In notice (${errorCode}):`, errorMessage);
 
     // Create an informative structured error
-    const enhancedError: any = new Error(errorMessage);
+    const isUnauthorizedDomain = errorCode === 'auth/unauthorized-domain';
+    const isPopupBlocked = errorCode === 'auth/popup-blocked';
+    const isCancelled = errorCode === 'auth/cancelled-popup-request' || errorCode === 'auth/popup-closed-by-user';
+    const isNetwork = errorCode === 'auth/network-request-failed' || errorMessage.includes('network-request-failed');
+
+    const enhancedError: any = new Error(
+      isUnauthorizedDomain
+        ? 'Domain hii haijaidhinishwa kwenye Firebase Auth. Kwenye https://ledgerbox.store domain imehakikiwa kikamilifu.'
+        : isPopupBlocked
+        ? 'Dirisha dogo (popup) la Google limezuiwa na kivinjari chako. Tafadhali ruhusu popups.'
+        : isCancelled
+        ? 'Kuingia na Google kumesitishwa na mtumiaji.'
+        : errorMessage
+    );
     enhancedError.code = errorCode;
-    enhancedError.isNetworkOrIframeError = 
-      errorCode === 'auth/network-request-failed' ||
-      errorCode === 'auth/popup-blocked' ||
-      errorCode === 'auth/cancelled-popup-request' ||
-      errorCode === 'auth/unauthorized-domain' ||
-      errorMessage.includes('network-request-failed');
+    enhancedError.isUnauthorizedDomain = isUnauthorizedDomain;
+    enhancedError.isPopupBlocked = isPopupBlocked;
+    enhancedError.isCancelled = isCancelled;
+    enhancedError.isNetworkOrIframeError = isNetwork || isPopupBlocked || isUnauthorizedDomain;
     
     throw enhancedError;
   } finally {

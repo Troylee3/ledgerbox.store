@@ -721,6 +721,14 @@ export function useStore() {
     });
   };
 
+  const clearAllSuppliers = () => {
+    if (!state) return;
+    saveState({
+      ...state,
+      suppliers: []
+    });
+  };
+
   // Manual Debt Adjustment & Payment Recording
   const recordDebtLog = (
     customerId: string, 
@@ -1188,6 +1196,7 @@ export function useStore() {
     addSupplier,
     updateSupplier,
     deleteSupplier,
+    clearAllSuppliers,
     addExpense,
     updateExpense,
     deleteExpense,

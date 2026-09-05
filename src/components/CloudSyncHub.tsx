@@ -122,10 +122,10 @@ export default function CloudSyncHub({
     }
   }, [activeAccount, sheetsConfigKey, lastSyncKey]);
 
-  // Handle Google Sign-In
+  // Handle Google Sign-In with Sheets scope
   const handleSignIn = async () => {
     try {
-      const result = await googleSignIn();
+      const result = await googleSignIn(['https://www.googleapis.com/auth/spreadsheets']);
       if (result) {
         setUser(result.user);
         setAccessToken(result.accessToken);

@@ -19,6 +19,7 @@ interface InventoryViewProps {
   addSupplier?: (s: Omit<Supplier, 'id' | 'createdAt'>) => void;
   updateSupplier?: (s: Supplier) => void;
   deleteSupplier?: (id: string) => void;
+  clearAllSuppliers?: () => void;
 }
 
 export default function InventoryView({
@@ -31,7 +32,8 @@ export default function InventoryView({
   deleteCategory,
   addSupplier,
   updateSupplier,
-  deleteSupplier
+  deleteSupplier,
+  clearAllSuppliers
 }: InventoryViewProps) {
   const { language, t } = useLanguage();
   const { products, categories, stockLogs, suppliers = [], settings, currentUser } = state;
@@ -74,6 +76,8 @@ export default function InventoryView({
   const [isAddingSupplier, setIsAddingSupplier] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [orderModalSupplier, setOrderModalSupplier] = useState<Supplier | null>(null);
+  const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
+  const [isClearingAllSuppliersModal, setIsClearingAllSuppliersModal] = useState(false);
   
   // Google Contacts States for Suppliers
   const [isGoogleContactsHubOpen, setIsGoogleContactsHubOpen] = useState(false);
@@ -284,14 +288,19 @@ export default function InventoryView({
           <button
             id="subtab-suppliers-btn"
             onClick={() => setActiveSubTab('SUPPLIERS')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeSubTab === 'SUPPLIERS'
                 ? 'bg-white text-indigo-700 shadow-sm font-extrabold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Truck size={15} />
-            {language === 'SW' ? 'Wasambazaji' : 'Suppliers'}
+            <span>{language === 'SW' ? 'Wasambazaji' : 'Suppliers'}</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+              activeSubTab === 'SUPPLIERS' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'
+            }`}>
+              {suppliers.length}
+            </span>
           </button>
           {canManageInventory && (
             <button
@@ -971,7 +980,20 @@ export default function InventoryView({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {suppliers.length > 0 && canManageInventory && (
+                    <button
+                      id="clear-all-suppliers-btn"
+                      type="button"
+                      onClick={() => setIsClearingAllSuppliersModal(true)}
+                      className="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                      title={language === 'SW' ? 'Futa wasambazaji wote waliopo ili kuweka wako tu' : 'Clear all existing suppliers to add your own'}
+                    >
+                      <Trash2 size={13} className="text-rose-600" />
+                      <span>{language === 'SW' ? 'Futa Wote' : 'Clear All'}</span>
+                    </button>
+                  )}
+
                   <button
                     id="open-google-contacts-suppliers-btn"
                     onClick={() => setIsGoogleContactsHubOpen(true)}
@@ -986,7 +1008,7 @@ export default function InventoryView({
                     <button
                       id="add-supplier-btn"
                       onClick={openAddSupplierForm}
-                      className="py-2 px-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer shrink-0"
+                      className="py-2 px-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer shrink-0"
                     >
                       <Plus size={15} />
                       {language === 'SW' ? 'Ongeza Msambazaji' : 'Add Supplier'}
@@ -1012,13 +1034,39 @@ export default function InventoryView({
               <div id="suppliers-list-scroll" className="flex-1 overflow-y-auto pr-1">
                 {filteredSuppliers.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                    <Building2 size={36} className="mb-2 text-slate-300" />
-                    <p className="text-xs font-semibold">
-                      {language === 'SW' ? 'Hakuna wasambazaji waliopatikana.' : 'No suppliers found.'}
+                    <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-3">
+                      <Building2 size={28} />
+                    </div>
+                    <p className="text-sm font-bold text-slate-800">
+                      {supplierQuery
+                        ? (language === 'SW' ? `Hakuna msambazaji anayelingana na "${supplierQuery}"` : `No suppliers match "${supplierQuery}"`)
+                        : (language === 'SW' ? 'Bado hujaweka wasambazaji kwenye duka lako.' : 'No suppliers registered in your store yet.')}
                     </p>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      {language === 'SW' ? 'Bonyeza "Ongeza Msambazaji" kusajili wa kwanza.' : 'Click "Add Supplier" to register one.'}
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm text-center">
+                      {language === 'SW' 
+                        ? 'Sajili wasambazaji wako halisi wa bidhaa ili uweze kuagiza mahitaji kwa WhatsApp na kuweka kumbukumbu zao.' 
+                        : 'Register your actual suppliers to easily send WhatsApp purchase orders and track supplier accounts.'}
                     </p>
+                    {canManageInventory && (
+                      <div className="flex flex-wrap items-center justify-center gap-2.5 mt-4">
+                        <button
+                          type="button"
+                          onClick={openAddSupplierForm}
+                          className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition cursor-pointer"
+                        >
+                          <Plus size={15} />
+                          <span>{language === 'SW' ? 'Sajili Msambazaji Wako' : 'Add Your Supplier'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsGoogleContactsHubOpen(true)}
+                          className="py-2.5 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold rounded-xl text-xs flex items-center gap-2 transition cursor-pointer"
+                        >
+                          <BookUser size={15} />
+                          <span>Google Contacts</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -1094,11 +1142,8 @@ export default function InventoryView({
                               </button>
                               <button
                                 id={`delete-supplier-${supp.id}`}
-                                onClick={() => {
-                                  if (confirm(language === 'SW' ? `Unahakika unataka kumfuta msambazaji ${supp.name}?` : `Are you sure you want to delete supplier ${supp.name}?`)) {
-                                    if (deleteSupplier) deleteSupplier(supp.id);
-                                  }
-                                }}
+                                type="button"
+                                onClick={() => setSupplierToDelete(supp)}
                                 className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition cursor-pointer"
                                 title={language === 'SW' ? 'Futa Msambazaji' : 'Delete Supplier'}
                               >
@@ -1237,6 +1282,20 @@ export default function InventoryView({
                   </div>
 
                   <div className="flex gap-2 pt-3 border-t border-slate-100">
+                    {editingSupplier && canManageInventory && (
+                      <button
+                        id="supp-form-delete-btn"
+                        type="button"
+                        onClick={() => {
+                          setSupplierToDelete(editingSupplier);
+                        }}
+                        className="py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                        title={language === 'SW' ? 'Futa msambazaji huyu' : 'Delete this supplier'}
+                      >
+                        <Trash2 size={14} />
+                        <span>{language === 'SW' ? 'Futa' : 'Delete'}</span>
+                      </button>
+                    )}
                     <button
                       id="supp-form-cancel-btn"
                       type="button"
@@ -1248,7 +1307,7 @@ export default function InventoryView({
                     <button
                       id="supp-form-submit-btn"
                       type="submit"
-                      className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition shadow-sm cursor-pointer"
+                      className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-sm cursor-pointer"
                     >
                       {editingSupplier 
                         ? (language === 'SW' ? 'Hifadhi' : 'Save') 
@@ -1454,6 +1513,139 @@ export default function InventoryView({
         pickerTarget="supplier"
         onSelectContactForFill={handleSelectSupplierFromPicker}
       />
+
+      {/* MODAL: THIBITISHO LA KUFUTA MSAMBAZAJI MMOJA (NO WINDOW.CONFIRM) */}
+      {supplierToDelete && (
+        <div 
+          id="delete-supplier-modal"
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 border border-slate-200 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-slate-900 text-sm">
+                  {language === 'SW' ? 'Futa Msambazaji Huyu?' : 'Delete This Supplier?'}
+                </h4>
+                <p className="text-xs text-slate-500">
+                  {language === 'SW' ? 'Taarifa zake zitaondolewa kwenye duka.' : 'Supplier details will be permanently removed.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
+              <div className="font-bold text-slate-900 text-sm">{supplierToDelete.name}</div>
+              {supplierToDelete.companyName && (
+                <div className="text-slate-600 font-medium text-[11px]">{supplierToDelete.companyName}</div>
+              )}
+              <div className="text-slate-500 font-mono text-[11px]">{supplierToDelete.phone}</div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {language === 'SW'
+                ? `Je, una uhakika unataka kumfuta msambazaji huyu ili uweke wasambazaji wako unaofanya nao kazi?`
+                : `Are you sure you want to delete this supplier to manage your own supplier network?`}
+            </p>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                id="cancel-delete-supplier-btn"
+                type="button"
+                onClick={() => setSupplierToDelete(null)}
+                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                {language === 'SW' ? 'Ghairi' : 'Cancel'}
+              </button>
+              <button
+                id="confirm-delete-supplier-btn"
+                type="button"
+                onClick={() => {
+                  if (deleteSupplier && supplierToDelete) {
+                    deleteSupplier(supplierToDelete.id);
+                    if (editingSupplier?.id === supplierToDelete.id) {
+                      setIsAddingSupplier(false);
+                      setEditingSupplier(null);
+                    }
+                    setSupplierToDelete(null);
+                  }
+                }}
+                className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Trash2 size={13} />
+                <span>{language === 'SW' ? 'Ndio, Futa' : 'Yes, Delete'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: THIBITISHO LA KUFUTA WASAMBAZAJI WOTE (CLEAR ALL DEMO/EXISTING SUPPLIERS) */}
+      {isClearingAllSuppliersModal && (
+        <div 
+          id="clear-all-suppliers-modal"
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 border border-slate-200 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-slate-900 text-sm">
+                  {language === 'SW' ? 'Futa Wasambazaji Wote?' : 'Clear All Suppliers?'}
+                </h4>
+                <p className="text-xs text-slate-500">
+                  {language === 'SW' ? `Jumla ya wasambazaji: ${suppliers.length}` : `Total suppliers: ${suppliers.length}`}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {language === 'SW'
+                ? `Kitendo hiki kitaondoa wasambazaji wote waliopo hivi sasa (wakiwemo wa mfano/demo) ili uweze kusajili orodha yako halisi ya wasambazaji.`
+                : `This will remove all current suppliers (including demo/sample records) so you can register only your own supplier network.`}
+            </p>
+
+            <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-amber-900 text-[11px] flex items-center gap-2">
+              <AlertTriangle size={15} className="text-amber-600 shrink-0" />
+              <span>
+                {language === 'SW' ? 'Baada ya kufuta, utaweza kuongeza wasambazaji wako kwa urahisi.' : 'After clearing, you can easily add your own suppliers.'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                id="cancel-clear-all-suppliers-btn"
+                type="button"
+                onClick={() => setIsClearingAllSuppliersModal(false)}
+                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                {language === 'SW' ? 'Ghairi' : 'Cancel'}
+              </button>
+              <button
+                id="confirm-clear-all-suppliers-btn"
+                type="button"
+                onClick={() => {
+                  if (clearAllSuppliers) {
+                    clearAllSuppliers();
+                  } else if (deleteSupplier) {
+                    suppliers.forEach(s => deleteSupplier(s.id));
+                  }
+                  setIsAddingSupplier(false);
+                  setEditingSupplier(null);
+                  setIsClearingAllSuppliersModal(false);
+                }}
+                className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Trash2 size={13} />
+                <span>{language === 'SW' ? 'Futa Wasambazaji Wote' : 'Clear All Suppliers'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>

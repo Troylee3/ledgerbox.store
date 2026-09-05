@@ -346,7 +346,7 @@ export const getEmptyDbState = (): DbState => {
     debtLogs: [],
     stockLogs: [],
     expenses: [],
-    suppliers: INITIAL_SUPPLIERS,
+    suppliers: [],
     settings: { ...INITIAL_SETTINGS },
     users: [],
     currentUser: null

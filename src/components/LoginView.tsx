@@ -178,13 +178,19 @@ export default function LoginView({
 
   // Google Sign-In Handler
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [googleAuthErrorDetails, setGoogleAuthErrorDetails] = useState<{ message: string; isNetworkOrIframe: boolean } | null>(null);
+  const [googleAuthErrorDetails, setGoogleAuthErrorDetails] = useState<{ 
+    message: string; 
+    isNetworkOrIframe: boolean;
+    isUnauthorizedDomain?: boolean;
+  } | null>(null);
 
   const handleGoogleSignIn = async () => {
     try {
       setIsGoogleLoading(true);
       setAccountError('');
       setGoogleAuthErrorDetails(null);
+      
+      // Requests clean, standard profile & email scopes verified for ledgerbox.store
       const res = await googleSignIn();
       if (res && res.user) {
         const email = res.user.email || `google_${res.user.uid}@duka.tz`;
@@ -192,35 +198,61 @@ export default function LoginView({
         const storeName = `Duka la ${name}`;
 
         if (loginAccount && loginAccount(email)) {
+          setRegSuccessMsg(
+            language === 'SW'
+              ? `Umeingia kikamilifu na Akaunti ya Google (${email})! Ingia kama Mwenye Duka kwa kutumia PIN "1234".`
+              : `Logged in with Google (${email})! Log in as Admin using PIN "1234".`
+          );
           setAuthMode('PIN_CASHIER');
         } else if (registerAccount) {
-          registerAccount(email, name, storeName, 'google_auth');
+          const created = registerAccount(email, name, storeName, 'google_auth');
+          setRegSuccessMsg(
+            language === 'SW'
+              ? `Akaunti ya duka "${created.storeName}" imesajiliwa kikamilifu na Google (${email})! Ingia kwa PIN "1234".`
+              : `Account "${created.storeName}" created with Google (${email})! Log in as Admin using PIN "1234".`
+          );
           setAuthMode('PIN_CASHIER');
         }
       }
     } catch (err: any) {
+      const errorCode = err?.code || '';
+      const errorMessage = err?.message || String(err);
+      const isUnauthorizedDomain = err?.isUnauthorizedDomain || errorCode === 'auth/unauthorized-domain';
+      const isPopupBlocked = err?.isPopupBlocked || errorCode === 'auth/popup-blocked';
+      const isCancelled = err?.isCancelled || errorCode === 'auth/cancelled-popup-request' || errorCode === 'auth/popup-closed-by-user';
       const isNetwork = err?.isNetworkOrIframeError || 
-        err?.code === 'auth/network-request-failed' || 
-        String(err?.message || err).includes('network-request-failed') ||
-        err?.code === 'auth/popup-blocked';
+        errorCode === 'auth/network-request-failed' || 
+        errorMessage.includes('network-request-failed') ||
+        isPopupBlocked ||
+        isUnauthorizedDomain;
 
-      console.warn('[LoginView] Google sign in notice:', err?.message || err);
+      console.warn('[LoginView] Google sign in notice:', errorMessage);
       
+      if (isCancelled) {
+        setAccountError(language === 'SW' ? 'Kuingia na Google kumesitishwa.' : 'Google sign-in was cancelled.');
+        return;
+      }
+
       setGoogleAuthErrorDetails({
-        message: language === 'SW'
-          ? (isNetwork
-              ? 'Kuingia na Google kumezuiwa na kivinjari au mtandao kwenye sanduku la preview (iframe). Unaweza kufungua kwenye Tab Mpya au kutumia usajili wa kawaida wa duka hapa chini unaofanya kazi 100% bila mtandao.'
-              : 'Imeshindikana kuingia na Akaunti ya Google. Tafadhali jaribu tena au tumia fomu ya duka.')
-          : (isNetwork
-              ? 'Google Sign-in popup was blocked or unable to reach auth network inside iframe preview. You can open in a new tab or use direct store registration below (100% offline-ready).'
-              : 'Failed to sign in with Google. Please retry or register store directly below.'),
-        isNetworkOrIframe: !!isNetwork
+        message: isUnauthorizedDomain
+          ? (language === 'SW'
+              ? 'Domain hii ya sasa haipo kwenye Firebase Auth. Kwenye domain yako rasmi iliyothibitishwa (https://ledgerbox.store), kuingia na Google kunafanya kazi 100% bila hitilafu.'
+              : 'Current URL is not in Firebase authorized list. On your verified domain (https://ledgerbox.store), Google login works 100% seamlessly.')
+          : isPopupBlocked
+          ? (language === 'SW'
+              ? 'Dirisha dogo (popup) la Google limezuiwa na kivinjari chako. Tafadhali ruhusu popup au fungua moja kwa moja https://ledgerbox.store kwenye tab mpya.'
+              : 'Google Sign-in popup was blocked by browser. Please allow popups or open https://ledgerbox.store in a new tab.')
+          : (language === 'SW'
+              ? 'Imeshindikana kuingia na Google kwenye sanduku la preview (iframe). Unaweza kufungua kwenye Tab Mpya ya https://ledgerbox.store au kutumia usajili wa kawaida hapa chini unaofanya kazi 100% hata bila mtandao.'
+              : 'Google Sign-in was blocked inside iframe preview. You can open your verified domain https://ledgerbox.store or use direct store registration below.'),
+        isNetworkOrIframe: !!isNetwork,
+        isUnauthorizedDomain: !!isUnauthorizedDomain
       });
 
       setAccountError(
         language === 'SW'
-          ? 'Imefeli kuingia na Google. Tumia usajili wa duka au fungua tab mpya.'
-          : 'Google sign-in failed. Use store registration or open in a new tab.'
+          ? 'Imeshindikana kuingia na Google hapa. Fungua https://ledgerbox.store au tumia fomu ya duka.'
+          : 'Google sign-in was blocked here. Open https://ledgerbox.store or use store form.'
       );
     } finally {
       setIsGoogleLoading(false);
@@ -723,13 +755,22 @@ export default function LoginView({
                 </div>
                 {googleAuthErrorDetails.isNetworkOrIframe && (
                   <div className="flex flex-wrap gap-2 pt-1">
+                    <a
+                      href="https://ledgerbox.store"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-sm transition"
+                    >
+                      <ExternalLink size={11} />
+                      <span>{language === 'SW' ? 'Fungua https://ledgerbox.store' : 'Open https://ledgerbox.store'}</span>
+                    </a>
                     <button
                       type="button"
                       onClick={() => window.open(window.location.href, '_blank')}
                       className="px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 border border-amber-500/40 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition"
                     >
                       <ExternalLink size={11} />
-                      {language === 'SW' ? 'Fungua kwenye Tab Mpya ya Kivinjari' : 'Open in New Browser Tab'}
+                      {language === 'SW' ? 'Fungua kwenye Tab Mpya' : 'Open in New Tab'}
                     </button>
                     <button
                       type="button"
@@ -740,23 +781,10 @@ export default function LoginView({
                         }
                         setGoogleAuthErrorDetails(null);
                       }}
-                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black cursor-pointer transition flex items-center gap-1 shadow-sm"
+                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition flex items-center gap-1"
                     >
                       <CheckCircle2 size={11} />
-                      {language === 'SW' ? 'Ingia Moja kwa Moja (Instant Demo Login)' : 'Instant 1-Click Store Login'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRegOwnerName('Mwenye Duka');
-                        setRegStoreName('Duka Kuu');
-                        setRegEmail('duka@pos.tz');
-                        setRegPassword('123456');
-                        setGoogleAuthErrorDetails(null);
-                      }}
-                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition"
-                    >
-                      {language === 'SW' ? 'Jaza Fomu ya Duka' : 'Fill Store Form'}
+                      {language === 'SW' ? 'Ingia Moja kwa Moja (Demo)' : 'Instant Demo Login'}
                     </button>
                   </div>
                 )}
@@ -774,17 +802,23 @@ export default function LoginView({
               onClick={handleGoogleSignIn}
               disabled={isGoogleLoading}
               type="button"
-              className="w-full py-2 bg-slate-950 hover:bg-slate-850 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition border border-slate-800 cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-slate-950 hover:bg-slate-850 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition border border-slate-800 cursor-pointer flex items-center justify-center gap-2 shadow-sm hover:border-slate-700"
             >
               {isGoogleLoading ? (
                 <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
               )}
-              {language === 'SW' 
-                ? (isGoogleLoading ? 'Inaunganisha Google...' : 'Sajili / Ingia na Akaunti ya Google') 
-                : (isGoogleLoading ? 'Connecting to Google...' : 'Sign in with Google')}
+              <span>
+                {language === 'SW' 
+                  ? (isGoogleLoading ? 'Inaunganisha Google...' : 'Sajili / Ingia na Akaunti ya Google') 
+                  : (isGoogleLoading ? 'Connecting to Google...' : 'Sign in with Google')}
+              </span>
             </button>
+            <div className="flex items-center justify-center gap-1.5 text-[9.5px] text-slate-400 font-mono">
+              <Shield size={10} className="text-emerald-400" />
+              <span>Domain: <strong className="text-emerald-400">ledgerbox.store</strong> (Google Verified)</span>
+            </div>
 
             <div className="text-center pt-2">
               <button
@@ -889,6 +923,35 @@ export default function LoginView({
                 {language === 'SW' ? 'Ingia Kwenye Duka Hili' : 'Login to Store Account'}
               </button>
             </form>
+
+            <div className="relative py-1 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div>
+              <span className="relative bg-slate-900 px-3 text-[10px] font-bold text-slate-500 uppercase">
+                {language === 'SW' ? 'au ingia na Google' : 'or Google Login'}
+              </span>
+            </div>
+
+            <button
+              onClick={handleGoogleSignIn}
+              disabled={isGoogleLoading}
+              type="button"
+              className="w-full py-2.5 bg-slate-950 hover:bg-slate-850 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition border border-slate-800 cursor-pointer flex items-center justify-center gap-2 shadow-sm hover:border-slate-700"
+            >
+              {isGoogleLoading ? (
+                <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
+              )}
+              <span>
+                {language === 'SW' 
+                  ? (isGoogleLoading ? 'Inaunganisha Google...' : 'Ingia na Akaunti ya Google') 
+                  : (isGoogleLoading ? 'Connecting to Google...' : 'Sign in with Google')}
+              </span>
+            </button>
+            <div className="flex items-center justify-center gap-1.5 text-[9.5px] text-slate-400 font-mono">
+              <Shield size={10} className="text-emerald-400" />
+              <span>Domain: <strong className="text-emerald-400">ledgerbox.store</strong> (Google Verified)</span>
+            </div>
 
             <div className="flex flex-col items-center gap-2 pt-2 text-center">
               <button
