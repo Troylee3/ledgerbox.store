@@ -260,10 +260,10 @@ export default function LoginView({
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-slate-100 font-sans flex flex-col md:flex-row select-none overflow-y-auto md:overflow-hidden">
+    <div className="min-h-screen md:h-screen md:max-h-screen w-full bg-[#0b0f19] text-slate-100 font-sans flex flex-col md:flex-row select-none overflow-y-auto md:overflow-hidden">
       
       {/* LEFT COLUMN: MULTI-USER AUTHENTICATION & POS PIN SYSTEM */}
-      <div className="w-full md:w-[480px] bg-slate-900/70 p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-800 z-10 shrink-0 md:h-screen md:overflow-y-auto scrollbar-thin">
+      <div className="w-full md:w-[480px] bg-slate-900/70 p-4 sm:p-6 flex flex-col justify-start border-b md:border-b-0 md:border-r border-slate-800 z-10 shrink-0 md:h-screen md:max-h-screen overflow-y-auto scrollbar-thin">
         
         {/* Brand Header */}
         <div>
@@ -394,7 +394,7 @@ export default function LoginView({
         {authMode === 'PIN_CASHIER' && (
           <>
             {!selectedPinUser ? (
-              <div className="space-y-4 my-auto">
+              <div className="space-y-4 my-2">
                 <div>
                   <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
                     <Shield size={16} className="text-indigo-400" />
@@ -458,7 +458,7 @@ export default function LoginView({
               </div>
             ) : (
               /* PIN DIAL PAD INTERFACE */
-              <div className="space-y-4 my-auto animate-fade-in">
+              <div className="space-y-4 my-2 animate-fade-in">
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => {
@@ -554,7 +554,7 @@ export default function LoginView({
 
         {/* Dynamic State 2: REGISTER NEW STORE OWNER ACCOUNT */}
         {authMode === 'REGISTER_ACCOUNT' && (
-          <div className="space-y-4 my-auto animate-fade-in">
+          <div className="space-y-4 my-2 animate-fade-in">
             <div>
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-sm font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
@@ -833,7 +833,7 @@ export default function LoginView({
 
         {/* Dynamic State 3: SWITCH / LOGIN TO EXISTING STORE ACCOUNT */}
         {authMode === 'SWITCH_ACCOUNT' && (
-          <div className="space-y-4 my-auto animate-fade-in">
+          <div className="space-y-4 my-2 animate-fade-in">
             <div>
               <h2 className="text-sm font-black uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
                 <LogIn size={16} />
