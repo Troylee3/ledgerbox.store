@@ -248,7 +248,7 @@ export default function InventoryView({
   };
 
   return (
-    <div id="inventory-wrapper" className="p-4 lg:p-6 flex flex-col h-full overflow-hidden font-sans bg-slate-50">
+    <div id="inventory-wrapper" className="p-4 lg:p-6 flex flex-col h-full min-h-0 overflow-y-auto overflow-x-hidden font-sans bg-slate-50">
       
       {/* Title & Secondary Navigation Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shrink-0 border-b border-slate-200/80 pb-4">
@@ -957,9 +957,9 @@ export default function InventoryView({
 
         {/* SUB TAB 4: WASAMBAZAJI / SUPPLIERS MANAGEMENT */}
         {activeSubTab === 'SUPPLIERS' && (
-          <div className="h-full flex flex-col md:flex-row gap-4 overflow-hidden font-sans">
+          <div className="flex min-h-0 flex-col gap-4 overflow-visible font-sans md:h-full md:flex-row md:overflow-hidden">
             {/* Left Column: Suppliers List & Header Controls */}
-            <div className="flex-1 flex flex-col bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs overflow-hidden">
+            <div className="flex min-h-[24rem] flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5 md:min-h-0">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
                 <div>
                   <h3 className="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
@@ -1116,7 +1116,7 @@ export default function InventoryView({
 
             {/* Right Column: Add/Edit Supplier Modal / Side Panel */}
             {isAddingSupplier && (
-              <div id="supplier-form-panel" className="w-full md:w-[340px] bg-white rounded-2xl border border-slate-200 p-5 shadow-lg font-sans shrink-0 h-fit">
+              <div id="supplier-form-panel" className="w-full shrink-0 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 font-sans shadow-lg md:max-h-full md:w-[340px]">
                 <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
                   <h4 className="font-black text-slate-900 text-xs uppercase tracking-wider flex items-center gap-2">
                     <Building2 size={15} className="text-indigo-600" />
