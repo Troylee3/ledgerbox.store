@@ -601,13 +601,6 @@ export default function App() {
           onClose={() => setIsDocModalOpen(false)}
         />
 
-        {/* PRIVACY POLICY & DATA PROTECTION MODAL */}
-        {isPrivacyModalOpen && (
-          <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col">
-            <PrivacyPolicyView onClose={() => setIsPrivacyModalOpen(false)} />
-          </div>
-        )}
-
       </main>
 
     </div>
