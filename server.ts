@@ -40,7 +40,13 @@ async function startServer() {
     console.log("Starting LedgerBox server in DEVELOPMENT mode with Vite Middleware...");
     
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        // The hosted preview does not proxy Vite's HMR WebSocket reliably.
+        // Disable it here as well as in vite.config.ts because middleware
+        // mode supplies this server configuration directly.
+        hmr: false,
+      },
       appType: "spa",
     });
     
