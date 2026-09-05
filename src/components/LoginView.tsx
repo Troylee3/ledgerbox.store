@@ -276,15 +276,6 @@ export default function LoginView({
                 <span>{language === 'SW' ? 'Mwongozo PDF' : 'PDF Specs'}</span>
               </button>
 
-              <button
-                onClick={() => setIsPrivacyModalOpen(true)}
-                className="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
-                title="Sera ya Faragha na Ulinzi wa Data (Privacy Policy)"
-              >
-                <Shield size={11} className="text-emerald-400 shrink-0" />
-                <span>{language === 'SW' ? 'Sera ya Faragha' : 'Privacy'}</span>
-              </button>
-
               <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800">
                 <button
                   onClick={() => setLanguage('SW')}
